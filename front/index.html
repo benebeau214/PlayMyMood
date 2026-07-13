@@ -1,0 +1,247 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Play My Mood</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" aria-live="polite">
+      <section class="screen active login-screen" id="login-screen" aria-label="Play My Mood 로그인">
+        <div class="brand">play my mood</div>
+        <button class="spotify-button" type="button" data-action="spotify-login">spotify로 로그인하기</button>
+      </section>
+
+      <section class="screen" id="name-screen" aria-label="이름 입력">
+        <header class="top-area">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="progress" aria-label="진행률 1/5">
+            <span class="bar active"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+          </div>
+        </header>
+        <div class="content name-content">
+          <h1>어떤 이름으로 불러드릴까요?</h1>
+          <label class="input-label" for="user-name">이름</label>
+          <input id="user-name" class="name-input" type="text" autocomplete="name" />
+        </div>
+        <button class="next-button" type="button" data-action="next">다음</button>
+      </section>
+
+      <section class="screen" id="era-screen" aria-label="음악 시절 선택">
+        <header class="top-area">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="progress" aria-label="진행률 2/5">
+            <span class="bar active"></span><span class="bar active"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+          </div>
+        </header>
+        <div class="content">
+          <h1>어느 시절의<br />음악 취향에 가까우신가요?</h1>
+          <div class="card-grid two-by-two" role="listbox" aria-label="음악 시절 선택">
+            <button class="choice-card blank-card" type="button" role="option" aria-label="첫 번째 시절"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="두 번째 시절"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="세 번째 시절"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="네 번째 시절"></button>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-action="next">다음</button>
+      </section>
+
+      <section class="screen" id="genre-screen" aria-label="장르 선택">
+        <header class="top-area">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="progress" aria-label="진행률 3/5">
+            <span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span><span class="bar"></span>
+          </div>
+        </header>
+        <div class="content genre-content">
+          <h1>즐겨듣는 장르를 알려주세요</h1>
+          <p class="helper-text">여러 개 골라도 좋아요</p>
+          <div class="card-grid genre-grid" role="listbox" aria-label="즐겨듣는 장르" aria-multiselectable="true">
+            <button class="choice-card genre-card" type="button" role="option">KPOP</button>
+            <button class="choice-card genre-card" type="button" role="option">POP</button>
+            <button class="choice-card genre-card" type="button" role="option">발라드</button>
+            <button class="choice-card genre-card" type="button" role="option">힙합</button>
+            <button class="choice-card genre-card" type="button" role="option">R&amp;B</button>
+            <button class="choice-card genre-card" type="button" role="option">EDM</button>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-action="next">다음</button>
+      </section>
+
+      <section class="screen" id="hit-screen" aria-label="인기곡과 숨은 명곡 선택">
+        <header class="top-area">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="progress" aria-label="진행률 4/5">
+            <span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar"></span>
+          </div>
+        </header>
+        <div class="content hit-content">
+          <h1>인기곡 vs 숨은 명곡<br />어느 쪽에 가까워요?</h1>
+          <div class="card-grid hit-choice" role="listbox" aria-label="인기곡과 숨은 명곡 선택">
+            <button class="choice-card hit-card" type="button" role="option">인기곡</button>
+            <button class="choice-card hit-card" type="button" role="option">숨은 명곡</button>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-action="next">다음</button>
+      </section>
+
+      <section class="screen" id="cover-screen" aria-label="커버 스타일 선택">
+        <header class="top-area">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="progress" aria-label="진행률 5/5">
+            <span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span><span class="bar active"></span>
+          </div>
+        </header>
+        <div class="content cover-content">
+          <h1>선호하는 커버 스타일을<br />골라주세요</h1>
+          <p class="helper-text">고른 스타일로 하루의 앨범 커버가 완성돼요</p>
+          <div class="card-grid two-by-two" role="listbox" aria-label="커버 스타일 선택">
+            <button class="choice-card blank-card" type="button" role="option" aria-label="첫 번째 커버 스타일"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="두 번째 커버 스타일"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="세 번째 커버 스타일"></button>
+            <button class="choice-card blank-card" type="button" role="option" aria-label="네 번째 커버 스타일"></button>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-action="next">완료</button>
+      </section>
+
+      <section class="screen finish-screen" id="finish-screen" aria-label="온보딩 완료">
+        <h1>오늘 하루를 음악으로<br />마무리 해봐요</h1>
+        <button class="finish-button" type="button" data-action="next">시작하기</button>
+      </section>
+
+      <section class="screen record-home-screen" id="record-home-screen" aria-label="기록 시작">
+        <div class="desk-scene" aria-hidden="true">
+          <div class="wall-band"></div>
+          <div class="camera">
+            <div class="camera-flash"></div>
+            <div class="camera-view"></div>
+            <div class="camera-lens"><span></span></div>
+          </div>
+          <div class="photo-stack photo-one"></div>
+          <div class="photo-stack photo-two"></div>
+          <div class="turntable">
+            <div class="record-disc"><span></span></div>
+            <div class="tonearm"></div>
+          </div>
+        </div>
+        <button class="record-button" type="button" data-action="open-records">기록하기</button>
+        <div class="archive-pill">아카이빙</div>
+      </section>
+
+      <section class="screen record-page-screen" id="record-page-screen" aria-label="오늘의 기록">
+        <header class="record-header">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="record-title">
+            <h1>오늘의 기록</h1>
+            <p>2026.07.08</p>
+          </div>
+        </header>
+        <div class="record-line"></div>
+        <div class="polaroid-scroll" id="polaroid-list" aria-label="오늘의 기록 목록"></div>
+        <button class="playlist-button" id="playlist-button" type="button">플레이리스트 만들기</button>
+      </section>
+      <section class="screen capture-screen" id="capture-screen" aria-label="사진 촬영">
+        <header class="capture-header">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <div class="record-title">
+            <h1>오늘의 기록</h1>
+            <p>2026.07.08</p>
+          </div>
+        </header>
+        <div class="camera-preview" aria-label="카메라 미리보기"></div>
+        <div class="capture-caption-bar"></div>
+        <button class="shutter-button" type="button" data-action="capture-photo" aria-label="사진 촬영">
+          <span></span>
+        </button>
+      </section>
+
+      <section class="screen note-screen" id="note-screen" aria-label="기록 문장 입력">
+        <header class="capture-header centered-only">
+          <div class="record-title">
+            <h1>오늘의 기록</h1>
+            <p>2026.07.08</p>
+          </div>
+        </header>
+        <div class="note-polaroid">
+          <div class="note-photo"></div>
+          <label class="input-label" for="record-note">기록 문장</label>
+          <input id="record-note" class="note-input" type="text" placeholder="지금 상황을 짧게 적어볼까요?" />
+        </div>
+        <div class="keyboard-placeholder">키보드</div>
+      </section>
+
+      <section class="screen emotion-screen" id="emotion-screen" aria-label="감정 선택">
+        <header class="capture-header centered-only">
+          <div class="record-title">
+            <h1>오늘의 기록</h1>
+            <p>2026.07.08</p>
+          </div>
+        </header>
+        <div class="emotion-panel">
+          <h1>이 순간의 감정을 담아주세요</h1>
+          <div class="emotion-photo">찍은 사진</div>
+          <div class="emotion-choice-grid" role="listbox" aria-label="감정 선택">
+            <button class="emotion-choice" type="button" role="option">감정1</button>
+            <button class="emotion-choice" type="button" role="option">감정2</button>
+            <button class="emotion-choice" type="button" role="option">감정3</button>
+            <button class="emotion-choice" type="button" role="option">감정4</button>
+            <button class="emotion-choice" type="button" role="option">감정5</button>
+            <button class="emotion-choice" type="button" role="option">감정6</button>
+          </div>
+        </div>
+        <button class="record-complete-button" type="button" data-action="save-log">기록 완료</button>
+      </section>
+
+      <section class="screen record-complete-screen" id="record-complete-screen" aria-label="기록 완료">
+        <div class="complete-message">
+          <h1>기록 완료!</h1>
+          <p>이따 또 만나요</p>
+        </div>
+      </section>
+
+      <section class="screen playlist-loading-screen" id="playlist-loading-screen" aria-label="플레이리스트 생성 중">
+        <div class="loading-record" aria-hidden="true"><span></span></div>
+        <h1>오늘의 플리를<br />만들고 있어요</h1>
+      </section>
+
+      <section class="screen playlist-edit-screen" id="playlist-edit-screen" aria-label="오늘의 플레이리스트">
+        <div class="playlist-edit-content">
+          <h1>오늘의 PlayList</h1>
+          <label class="input-label" for="playlist-title">플레이리스트 제목</label>
+          <input id="playlist-title" class="playlist-title-input" type="text" placeholder="플레이리스트의 제목을 붙여주세요" />
+          <div class="playlist-cover-preview" aria-label="앨범 커버 미리보기">
+            <div class="cover-square"></div>
+            <div class="cover-disc"></div>
+          </div>
+          <p class="playlist-date">2026.06.11</p>
+          <p class="intro-label">한 줄 소개</p>
+          <input class="playlist-intro-input" type="text" value="행복한 나를 담은 플리입니다." />
+        </div>
+        <section class="playlist-list" aria-label="플리 목록">
+          <h2>플리 목록</h2>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
+        </section>
+        <button class="playlist-finish-button" type="button" data-action="complete-playlist">플레이스트 완성하기</button>
+      </section>
+
+      <section class="screen playlist-complete-screen" id="playlist-complete-screen" aria-label="플레이리스트 완성">
+        <div class="complete-cover"></div>
+        <h1>오늘의 playList 완성</h1>
+        <div class="complete-actions">
+          <button type="button" data-action="go-record-home">홈으로 돌아가기</button>
+          <button type="button">플리 들으러 가기</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
+
+
+
