@@ -1,13 +1,15 @@
 ﻿"""End-to-end test runner for PlayMyMood agents.
 
 Flow:
-1. photo path + caption + selected emotion label(s)
-2. Claude emotion intake agent
-3. music agent mood profile + ReccoBeats recommendation
-4. print one JSON result
+1. Receive one log: optional photo path, caption, and one or more selected emotion labels.
+2. Run the Claude intake agent to analyze photo/caption/emojis and produce numeric emotion scores.
+3. Pass the music_agent_input into the music agent and call ReccoBeats for candidate songs.
+4. In this test runner only, force the ReccoBeats popularity target to 80.
+5. If --pick-best is set, ask Claude to choose the single best track from the candidates.
+6. Print one JSON result, optionally saving it with --output.
 
 Example:
-python test/test_agent_pipeline.py --image ./sample.jpg --caption "발표 끝나고 너무 뿌듯했다" --emoji "뿌듯한" --emoji "후련한" --limit 3
+python test/test_agent_pipeline.py --image ./sample.jpg --caption "발표 끝나고 너무 뿌듯했다" --emoji "뿌듯한" --emoji "후련한" --limit 5 --pick-best
 """
 
 from __future__ import annotations
@@ -309,6 +311,7 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
 
 
 
