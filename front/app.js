@@ -26,7 +26,37 @@ let playlistTimer = null;
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
 const recordNoteInput = document.getElementById("record-note");
+const hitSlider = document.getElementById("hit-slider");
+const hitSliderWrap = document.querySelector(".hit-slider-wrap");
 
+
+
+function formatToday() {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}.${values.month}.${values.day}`;
+}
+
+function updateRecordDates() {
+  const today = formatToday();
+  for (const dateElement of document.querySelectorAll(".record-date")) {
+    dateElement.textContent = today;
+  }
+}
+function updateHitSlider() {
+  if (!hitSlider) return;
+  const min = Number(hitSlider.min || 0);
+  const max = Number(hitSlider.max || 100);
+  const value = Number(hitSlider.value || 0);
+  const percent = ((value - min) / (max - min)) * 100;
+  hitSlider.style.setProperty("--hit-value", `${percent}%`);
+  hitSliderWrap?.style.setProperty("--hit-value", `${percent}%`);
+}
 function showScreen(index) {
   if (completeTimer) {
     clearTimeout(completeTimer);
@@ -43,7 +73,11 @@ function showScreen(index) {
   }
 
   const currentScreen = screens[currentIndex];
-  if (currentScreen === "record-page-screen") {
+  if (currentScreen === "finish-screen") {
+    completeTimer = setTimeout(() => {
+      showScreen(screens.indexOf("record-home-screen"));
+    }, 3000);
+  }  if (currentScreen === "record-page-screen") {
     renderPolaroids();
   }
   if (currentScreen === "record-complete-screen") {
@@ -87,16 +121,18 @@ function selectEmotion(button) {
 }
 
 function polaroidPosition(index) {
-  const row = Math.floor(index / 2);
-  const col = index % 2;
-  const top = row * 168;
-  const left = col === 0 ? 13 : 176;
-  const rotations = [-10, -9, 8, -8, 7, -6, 5, -4];
-  const offsets = [0, 58, 34, 92, 12, 70, 42, 100];
+  const row = Math.floor(index / 4);
+  const layouts = [
+    { left: -18, top: 10, rotate: -15 },
+    { left: 180, top: 118, rotate: -12 },
+    { left: -9, top: 338, rotate: 5 },
+    { left: 168, top: 438, rotate: -12 },
+  ];
+  const base = layouts[index % layouts.length];
   return {
-    left,
-    top: top + (offsets[index % offsets.length] % 74),
-    rotate: rotations[index % rotations.length],
+    left: base.left,
+    top: base.top + row * 720,
+    rotate: base.rotate,
   };
 }
 
@@ -117,19 +153,19 @@ function makePolaroid({ index, add = false }) {
 
   if (add) {
     card.dataset.action = "add-log";
-    image.innerHTML = '<span><span class="add-mark">+</span>기록하기</span>';
+    image.innerHTML = '<span class="add-mark">+</span><span class="add-text">기록하기</span>';
     caption.textContent = "";
   } else if (logCount === 0) {
-    image.textContent = "지금 순간을 기록해보세요";
+    image.textContent = "";
     caption.textContent = "";
   } else {
-    image.textContent = `오늘의 순간 ${index + 1}`;
+    image.textContent = "";
     caption.textContent = pendingNote || "오늘 감정과 상황을 기록했어요";
   }
 
   const time = document.createElement("span");
   time.className = "polaroid-time";
-  time.textContent = add ? "" : "16:34";
+  time.textContent = "";
 
   card.append(image, caption, time);
   return card;
@@ -147,8 +183,8 @@ function renderPolaroids() {
   }
   board.appendChild(makePolaroid({ index: displayCount, add: true }));
 
-  const rows = Math.ceil(totalCards / 2);
-  board.style.minHeight = `${Math.max(520, rows * 190 + 130)}px`;
+  const rows = Math.ceil(totalCards / 4);
+  board.style.minHeight = `${Math.max(760, rows * 720 + 120)}px`;
   polaroidList.appendChild(board);
   playlistButton.classList.toggle("visible", logCount >= 4);
 }
@@ -159,6 +195,10 @@ recordNoteInput?.addEventListener("keydown", (event) => {
   showScreen(screens.indexOf("emotion-screen"));
 });
 
+
+hitSlider?.addEventListener("input", updateHitSlider);
+updateHitSlider();
+updateRecordDates();
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
@@ -223,3 +263,13 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+
+
+
+
+
+
+
+
+
+

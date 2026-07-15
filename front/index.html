@@ -13,17 +13,20 @@
         <button class="spotify-button" type="button" data-action="spotify-login">spotify로 로그인하기</button>
       </section>
 
-      <section class="screen" id="name-screen" aria-label="이름 입력">
+      <section class="screen" id="name-screen" aria-label="시작 안내">
         <header class="top-area">
           <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
           <div class="progress" aria-label="진행률 1/5">
             <span class="bar active"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
           </div>
         </header>
-        <div class="content name-content">
-          <h1>어떤 이름으로 불러드릴까요?</h1>
-          <label class="input-label" for="user-name">이름</label>
-          <input id="user-name" class="name-input" type="text" autocomplete="name" />
+        <div class="content name-content intro-content">
+          <h1>반가워요!</h1>
+          <p>시작하기 전에 음악을 추천하기<br />위해 몇가지 물어볼게요</p>
+          <div class="intro-notes" aria-hidden="true">
+            <img class="intro-note yellow-note" src="./assets/music-note-yellow.png" alt="" />
+            <img class="intro-note orange-note" src="./assets/music-note-orange.png" alt="" />
+          </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
       </section>
@@ -35,13 +38,13 @@
             <span class="bar active"></span><span class="bar active"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
           </div>
         </header>
-        <div class="content">
+        <div class="content era-content">
           <h1>어느 시절의<br />음악 취향에 가까우신가요?</h1>
-          <div class="card-grid two-by-two" role="listbox" aria-label="음악 시절 선택">
-            <button class="choice-card blank-card" type="button" role="option" aria-label="첫 번째 시절"></button>
-            <button class="choice-card blank-card" type="button" role="option" aria-label="두 번째 시절"></button>
-            <button class="choice-card blank-card" type="button" role="option" aria-label="세 번째 시절"></button>
-            <button class="choice-card blank-card" type="button" role="option" aria-label="네 번째 시절"></button>
+          <div class="card-grid two-by-two era-grid" role="listbox" aria-label="음악 시절 선택">
+            <button class="choice-card era-card selected" type="button" role="option" aria-selected="true">20’s</button>
+            <button class="choice-card era-card" type="button" role="option">10’s</button>
+            <button class="choice-card era-card" type="button" role="option">00’s</button>
+            <button class="choice-card era-card" type="button" role="option">00’s 이전</button>
           </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
@@ -58,12 +61,15 @@
           <h1>즐겨듣는 장르를 알려주세요</h1>
           <p class="helper-text">여러 개 골라도 좋아요</p>
           <div class="card-grid genre-grid" role="listbox" aria-label="즐겨듣는 장르" aria-multiselectable="true">
-            <button class="choice-card genre-card" type="button" role="option">KPOP</button>
-            <button class="choice-card genre-card" type="button" role="option">POP</button>
-            <button class="choice-card genre-card" type="button" role="option">발라드</button>
-            <button class="choice-card genre-card" type="button" role="option">힙합</button>
-            <button class="choice-card genre-card" type="button" role="option">R&amp;B</button>
-            <button class="choice-card genre-card" type="button" role="option">EDM</button>
+            <button class="choice-card genre-card genre-kpop selected" type="button" role="option" aria-selected="true"><img src="./assets/music-note-yellow.png" alt="" />KPOP</button>
+            <button class="choice-card genre-card genre-pop" type="button" role="option"><img src="./assets/music-note-orange.png" alt="" />POP</button>
+            <button class="choice-card genre-card genre-ballad" type="button" role="option">발라드</button>
+            <button class="choice-card genre-card genre-rnb" type="button" role="option">R&amp;B</button>
+            <button class="choice-card genre-card genre-jazz" type="button" role="option">재즈</button>
+            <button class="choice-card genre-card genre-hiphop" type="button" role="option">힙합</button>
+            <button class="choice-card genre-card genre-edm" type="button" role="option"><img src="./assets/music-note-yellow.png" alt="" />EDM</button>
+            <button class="choice-card genre-card genre-trot" type="button" role="option">트로트</button>
+            <button class="choice-card genre-card genre-rock" type="button" role="option"><img src="./assets/music-note-orange.png" alt="" />록</button>
           </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
@@ -77,10 +83,19 @@
           </div>
         </header>
         <div class="content hit-content">
-          <h1>인기곡 vs 숨은 명곡<br />어느 쪽에 가까워요?</h1>
-          <div class="card-grid hit-choice" role="listbox" aria-label="인기곡과 숨은 명곡 선택">
-            <button class="choice-card hit-card" type="button" role="option">인기곡</button>
-            <button class="choice-card hit-card" type="button" role="option">숨은 명곡</button>
+          <h1>인기곡 vs 숨은 명곡<br />어느 쪽을 더 추천받고 싶나요?</h1>
+          <div class="hit-slider-wrap">
+            <div class="hit-slider-visual" aria-hidden="true">
+              <div class="hit-slider-track">
+                <span class="hit-slider-fill"></span>
+                <span class="hit-slider-handle"></span>
+              </div>
+            </div>
+            <input id="hit-slider" class="hit-slider" type="range" min="0" max="100" value="30" aria-label="인기곡과 숨은 명곡 선호도" />
+            <div class="hit-slider-labels" aria-hidden="true">
+              <span>인기곡</span>
+              <span>숨은 명곡</span>
+            </div>
           </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
@@ -107,24 +122,22 @@
       </section>
 
       <section class="screen finish-screen" id="finish-screen" aria-label="온보딩 완료">
-        <h1>오늘 하루를 음악으로<br />마무리 해봐요</h1>
-        <button class="finish-button" type="button" data-action="next">시작하기</button>
+        <p class="finish-greeting">환영해요!</p>
+        <h1>Play My Mood와<br />오늘 하루를 음악으로<br />마무리 해봐요</h1>
       </section>
 
       <section class="screen record-home-screen" id="record-home-screen" aria-label="기록 시작">
         <div class="desk-scene" aria-hidden="true">
           <div class="wall-band"></div>
-          <div class="camera">
-            <div class="camera-flash"></div>
-            <div class="camera-view"></div>
-            <div class="camera-lens"><span></span></div>
+          <img class="scene-plant" src="./assets/desk-plant.png" alt="" />
+          <div class="scene-clock" aria-hidden="true">
+            <img class="clock-face" src="./assets/clock-face.png" alt="" />
+            <img class="clock-hand clock-hand-long" src="./assets/clock-hand-long.png" alt="" />
           </div>
-          <div class="photo-stack photo-one"></div>
-          <div class="photo-stack photo-two"></div>
-          <div class="turntable">
-            <div class="record-disc"><span></span></div>
-            <div class="tonearm"></div>
-          </div>
+          <img class="scene-camera" src="./assets/instant-camera.png" alt="" />
+          <img class="scene-photo scene-photo-back" src="./assets/archive-photo.png" alt="" />
+          <img class="scene-photo scene-photo-front" src="./assets/archive-photo-front.png" alt="" />
+          <img class="scene-player" src="./assets/record-player.png" alt="" />
         </div>
         <button class="record-button" type="button" data-action="open-records">기록하기</button>
         <div class="archive-pill">아카이빙</div>
@@ -135,7 +148,7 @@
           <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
           <div class="record-title">
             <h1>오늘의 기록</h1>
-            <p>2026.07.08</p>
+            <p class="record-date">2026.07.08</p>
           </div>
         </header>
         <div class="record-line"></div>
@@ -147,7 +160,7 @@
           <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
           <div class="record-title">
             <h1>오늘의 기록</h1>
-            <p>2026.07.08</p>
+            <p class="record-date">2026.07.08</p>
           </div>
         </header>
         <div class="camera-preview" aria-label="카메라 미리보기"></div>
@@ -161,7 +174,7 @@
         <header class="capture-header centered-only">
           <div class="record-title">
             <h1>오늘의 기록</h1>
-            <p>2026.07.08</p>
+            <p class="record-date">2026.07.08</p>
           </div>
         </header>
         <div class="note-polaroid">
@@ -176,7 +189,7 @@
         <header class="capture-header centered-only">
           <div class="record-title">
             <h1>오늘의 기록</h1>
-            <p>2026.07.08</p>
+            <p class="record-date">2026.07.08</p>
           </div>
         </header>
         <div class="emotion-panel">
@@ -242,6 +255,23 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
