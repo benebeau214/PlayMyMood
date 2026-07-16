@@ -1827,3 +1827,299 @@ h1 {
 .intro-notes .orange-note {
   right: 8px;
 }
+
+/* Spinning record while playlist is being generated */
+.playlist-loading-screen.active .loading-record {
+  animation: loading-record-spin 1.1s linear infinite;
+  transform-origin: center center;
+}
+
+@keyframes loading-record-spin {
+  from { transform: translateX(-50%) rotate(0deg); }
+  to { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* Frame 79 playlist edit layout */
+.playlist-edit-screen {
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.playlist-home-button {
+  position: absolute;
+  left: 31px;
+  top: 55px;
+  width: 25px;
+  height: 25px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  z-index: 4;
+}
+
+.playlist-home-button::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 9px;
+  width: 18px;
+  height: 14px;
+  border: 2px solid #111;
+  border-top: 0;
+  border-radius: 2px;
+}
+
+.playlist-home-button::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-left: 2px solid #111;
+  border-top: 2px solid #111;
+  transform: rotate(45deg);
+  border-radius: 2px 0 0 0;
+}
+
+.playlist-edit-content {
+  padding: 61px 22px 0;
+  text-align: center;
+}
+
+.playlist-edit-content h1 {
+  margin: 0 0 31px;
+  font-size: 1.28rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.playlist-edit-content .input-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.playlist-title-input {
+  display: block;
+  width: 310px;
+  height: 26px;
+  margin: 0 auto;
+  padding: 0 4px 5px;
+  border: 0;
+  border-bottom: 1px solid #888;
+  border-radius: 0;
+  background: transparent;
+  color: #111;
+  text-align: center;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.playlist-title-input::placeholder,
+.playlist-intro-input::placeholder {
+  color: #b3b0aa;
+  opacity: 1;
+}
+
+.playlist-cover-preview {
+  position: relative;
+  width: 250px;
+  height: 170px;
+  margin: 27px auto 7px;
+}
+
+.cover-square {
+  position: absolute;
+  left: 43px;
+  top: 0;
+  z-index: 2;
+  width: 165px;
+  height: 165px;
+  background: #d76468;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.22);
+}
+
+.cover-disc {
+  position: absolute;
+  right: 37px;
+  top: 18px;
+  width: 133px;
+  height: 133px;
+  border-radius: 50%;
+  background: conic-gradient(#231f20 0 54%, #5f6368 54% 65%, #231f20 65% 84%, #f0f0f0 84% 91%, #231f20 91% 100%);
+}
+
+.cover-disc::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: #d34a00;
+  transform: translate(-50%, -50%);
+}
+
+.cover-disc::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f2f2f2;
+  transform: translate(-50%, -50%);
+}
+
+.playlist-date {
+  margin: 0 0 10px;
+  color: #555;
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.intro-label {
+  margin: 0 0 7px;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.playlist-intro-input {
+  width: 100%;
+  height: 47px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #111;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.playlist-list {
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  top: 477px;
+  bottom: 83px;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  border-top: 1px solid #cfc9bd;
+}
+
+.playlist-list h2 {
+  display: none;
+}
+
+.track-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 34px;
+  align-items: center;
+  min-height: 77px;
+  padding: 12px 0;
+  border-bottom: 1px solid #d8d2c8;
+  color: #111;
+  font-size: 0.96rem;
+  line-height: 1.13;
+}
+
+.track-thumb {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(180deg, #5f83a7 0%, #f2a25a 50%, #17233d 100%);
+}
+
+.track-row:nth-of-type(2) .track-thumb {
+  background: linear-gradient(155deg, #b9d0e2 0%, #f6f4de 34%, #879b5f 62%, #3f5f42 100%);
+}
+
+.track-row:nth-of-type(3) .track-thumb {
+  background: url("./assets/archive-photo.png") center / cover no-repeat, #ddd;
+}
+
+.track-row:nth-of-type(4) .track-thumb {
+  background: #e8e8e8;
+}
+
+.track-row button {
+  justify-self: end;
+  width: 31px;
+  height: 31px;
+  border: 0;
+  background: transparent;
+  color: #8b8b8b;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.playlist-finish-button {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 54px;
+  height: 58px;
+  border: 0;
+  border-radius: 8px;
+  background: #5b5b5b;
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Playlist edit refinements */
+.playlist-cover-preview {
+  width: 286px;
+}
+
+.playlist-cover-preview .cover-square {
+  left: 50px;
+  z-index: 2;
+}
+
+.playlist-cover-preview .cover-disc {
+  right: 16px;
+  z-index: 1;
+}
+
+.playlist-list .track-thumb,
+.playlist-list .track-row:nth-of-type(2) .track-thumb,
+.playlist-list .track-row:nth-of-type(3) .track-thumb,
+.playlist-list .track-row:nth-of-type(4) .track-thumb {
+  background: #e8e8e8;
+}
+
+/* Use record image asset for playlist cover preview */
+.playlist-cover-preview {
+  width: 304px;
+}
+
+.playlist-cover-preview .cover-square {
+  left: 43px;
+}
+
+.playlist-cover-preview .cover-disc {
+  right: 8px;
+  top: 11px;
+  width: 154px;
+  height: 154px;
+  border-radius: 50%;
+  background: transparent;
+  object-fit: contain;
+}
+
+.playlist-cover-preview .cover-disc::before,
+.playlist-cover-preview .cover-disc::after {
+  content: none;
+}
