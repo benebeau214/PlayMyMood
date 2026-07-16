@@ -140,9 +140,71 @@
           <img class="scene-player" src="./assets/record-player.png" alt="" />
         </div>
         <button class="record-button" type="button" data-action="open-records">기록하기</button>
-        <div class="archive-pill">아카이빙</div>
+        <button class="archive-pill" type="button" data-action="open-archive">아카이빙</button>
       </section>
 
+      <section class="screen archive-screen" id="archive-screen" aria-label="아카이빙">
+        <header class="archive-header">
+          <button class="playlist-home-button archive-home-button" type="button" data-action="go-record-home" aria-label="홈으로 돌아가기"></button>
+          <div class="archive-year-control" aria-label="연도 선택">
+            <button type="button" aria-label="이전 연도">&lt;</button>
+            <span>2026</span>
+            <button type="button" aria-label="다음 연도">&gt;</button>
+          </div>
+        </header>
+        <div class="archive-scroll">
+          <img class="archive-turntable" src="./assets/archive-top-player.png" alt="" aria-hidden="true" />
+          <div class="archive-bookcase" aria-label="월별 플레이리스트 책장">
+            <section class="archive-month" data-month="1"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="1">01</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="2"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="2">02</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="3"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="3">03</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="4"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="4">04</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="5"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="5">05</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="6"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="6">06</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="7"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="7">07</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="8"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="8">08</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="9"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="9">09</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="10"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="10">10</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="11"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="11">11</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="12"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="12">12</button></h2><div class="archive-shelf empty"></div></section>
+          </div>
+        </div>
+      </section>
+      <section class="screen archive-month-screen" id="archive-month-screen" aria-label="월별 플레이리스트">
+        <button class="archive-inner-back" type="button" data-action="back" aria-label="뒤로">←</button>
+        <header class="archive-month-header">
+          <button class="archive-month-nav" type="button" aria-label="이전 월">&lt;</button>
+          <span id="archive-month-title">2026.07</span>
+          <button class="archive-month-nav" type="button" aria-label="다음 월">&gt;</button>
+        </header>
+        <div class="archive-month-carousel" id="archive-month-carousel" aria-label="월별 플레이리스트 목록"></div>
+        <section class="archive-month-copy">
+          <h1 id="archive-month-playlist-title">커피 맛</h1>
+          <p id="archive-month-playlist-desc">마셨던 커피가 유난히 향기로웠던 날,<br />커피마실 때 듣고 싶은 플리다.</p>
+        </section>
+      </section>
+
+      <section class="screen archive-playlist-detail-screen" id="archive-playlist-detail-screen" aria-label="아카이빙 플레이리스트 상세">
+        <button class="archive-inner-back" type="button" data-action="back" aria-label="뒤로">←</button>
+        <header class="archive-month-header">
+          <button class="archive-month-nav" type="button" aria-label="이전 월">&lt;</button>
+          <span id="archive-detail-title">2026.07</span>
+          <button class="archive-month-nav" type="button" aria-label="다음 월">&gt;</button>
+        </header>
+        <p class="archive-detail-date" id="archive-detail-date">2026.07.16</p>
+        <button class="archive-detail-cover" type="button" aria-label="앨범 커버">
+          <span class="archive-detail-square"></span>
+          <img class="archive-detail-record" src="./assets/playlist-record.png" alt="" />
+        </button>
+        <h1 class="archive-detail-name" id="archive-detail-name">커피 맛</h1>
+        <section class="archive-detail-tracks" aria-label="플리 목록">
+          <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
+          <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
+          <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
+          <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
+        </section>
+        <button class="archive-listen-button" type="button">Playlist 들으러 가기</button>
+      </section>
       <section class="screen record-page-screen" id="record-page-screen" aria-label="오늘의 기록">
         <header class="record-header">
           <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
@@ -285,6 +347,11 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
+
 
 
 
