@@ -19,6 +19,7 @@
 
 let currentIndex = 0;
 let logCount = 0;
+const logs = [];
 let pendingNote = "";
 let completeTimer = null;
 let playlistTimer = null;
@@ -28,6 +29,22 @@ const playlistButton = document.getElementById("playlist-button");
 const recordNoteInput = document.getElementById("record-note");
 const hitSlider = document.getElementById("hit-slider");
 const hitSliderWrap = document.querySelector(".hit-slider-wrap");
+const cameraVideo = document.getElementById("camera-video");
+const cameraCanvas = document.getElementById("camera-canvas");
+const cameraPreview = document.querySelector(".camera-preview");
+const cameraFlashOverlay = document.querySelector(".camera-flash-overlay");
+const zoomSlider = document.getElementById("zoom-slider");
+const zoomLabels = document.querySelectorAll(".zoom-labels span");
+const notePhoto = document.querySelector(".note-photo");
+const flashButton = document.querySelector(".flash-button");
+const emotionPhotoPreview = document.querySelector(".emotion-photo-preview");
+const emotionCaptionPreview = document.querySelector(".emotion-caption-preview");
+const emotionStaff = document.querySelector(".emotion-staff");
+let cameraStream = null;
+let cameraFacingMode = "environment";
+let flashEnabled = false;
+let capturedPhotoDataUrl = "";
+let staffNoteCount = 0;
 
 
 
@@ -46,6 +63,116 @@ function updateRecordDates() {
   const today = formatToday();
   for (const dateElement of document.querySelectorAll(".record-date")) {
     dateElement.textContent = today;
+  }
+}
+
+function applyZoom() {
+  if (!zoomSlider) return;
+  const zoom = Number(zoomSlider.value || 1);
+  if (cameraVideo) cameraVideo.style.transform = `scale(${zoom})`;
+  for (const label of zoomLabels) {
+    label.classList.toggle("active", Number(label.dataset.zoom) === zoom);
+  }
+}
+
+function stopCamera() {
+  if (!cameraStream) return;
+  for (const track of cameraStream.getTracks()) track.stop();
+  cameraStream = null;
+  if (cameraVideo) cameraVideo.srcObject = null;
+  cameraPreview?.classList.remove("has-stream");
+}
+
+async function startCamera() {
+  if (!navigator.mediaDevices?.getUserMedia || !cameraVideo) return;
+  stopCamera();
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+    cameraVideo.srcObject = cameraStream;
+    cameraPreview?.classList.add("has-stream");
+    await cameraVideo.play();
+    applyZoom();
+  } catch (error) {
+    cameraPreview?.classList.remove("has-stream");
+  }
+}
+
+async function applyTorch() {
+  const track = cameraStream?.getVideoTracks?.()[0];
+  if (!track) return;
+  const capabilities = track.getCapabilities?.();
+  if (!capabilities?.torch) return;
+  try {
+    await track.applyConstraints({ advanced: [{ torch: flashEnabled }] });
+  } catch (error) {
+    // Torch is optional across browsers/devices.
+  }
+}
+
+function flashPreview() {
+  cameraFlashOverlay?.classList.remove("flash");
+  void cameraFlashOverlay?.offsetWidth;
+  cameraFlashOverlay?.classList.add("flash");
+}
+
+function updateCapturedPhotoPreview() {
+  if (!notePhoto || !capturedPhotoDataUrl) return;
+  notePhoto.classList.add("has-photo");
+  notePhoto.style.backgroundImage = `url("${capturedPhotoDataUrl}")`;
+  notePhoto.style.backgroundSize = "cover";
+  notePhoto.style.backgroundPosition = "center";
+  let image = notePhoto.querySelector("img");
+  if (!image) {
+    image = document.createElement("img");
+    image.alt = "촬영한 사진";
+    notePhoto.replaceChildren(image);
+  }
+  image.src = capturedPhotoDataUrl;
+}
+
+function captureCurrentFrame() {
+  if (!cameraVideo || !cameraCanvas || cameraVideo.readyState < 2) return false;
+  const zoom = Number(zoomSlider?.value || 1);
+  const sourceWidth = cameraVideo.videoWidth;
+  const sourceHeight = cameraVideo.videoHeight;
+  if (!sourceWidth || !sourceHeight) return false;
+  const cropWidth = sourceWidth / zoom;
+  const cropHeight = sourceHeight / zoom;
+  const sourceX = (sourceWidth - cropWidth) / 2;
+  const sourceY = (sourceHeight - cropHeight) / 2;
+  cameraCanvas.width = 1080;
+  cameraCanvas.height = 1080;
+  const context = cameraCanvas.getContext("2d");
+  context.drawImage(cameraVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, cameraCanvas.width, cameraCanvas.height);
+  capturedPhotoDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.9);
+  updateCapturedPhotoPreview();
+  return true;
+}
+
+function capturePhoto() {
+  if (flashEnabled) flashPreview();
+  const captured = captureCurrentFrame();
+  if (!captured) return;
+  showScreen(screens.indexOf("note-screen"));
+  requestAnimationFrame(updateCapturedPhotoPreview);
+  recordNoteInput?.focus();
+}
+function updateEmotionPreview() {
+  if (emotionPhotoPreview) {
+    emotionPhotoPreview.replaceChildren();
+    if (capturedPhotoDataUrl) {
+      const image = document.createElement("img");
+      image.src = capturedPhotoDataUrl;
+      image.alt = "촬영한 사진";
+      emotionPhotoPreview.append(image);
+    }
+  }
+
+  if (emotionCaptionPreview) {
+    emotionCaptionPreview.textContent = pendingNote || "오늘 감정과 상황을 기록했어요";
   }
 }
 function updateHitSlider() {
@@ -77,12 +204,25 @@ function showScreen(index) {
     completeTimer = setTimeout(() => {
       showScreen(screens.indexOf("record-home-screen"));
     }, 3000);
-  }  if (currentScreen === "record-page-screen") {
+  }
+  if (currentScreen === "capture-screen") {
+    startCamera();
+  } else {
+    stopCamera();
+  }
+  if (currentScreen === "note-screen") {
+    updateCapturedPhotoPreview();
+  }
+  if (currentScreen === "emotion-screen") {
+    updateEmotionPreview();
+    resetEmotionStaff();
+  }
+  if (currentScreen === "record-page-screen") {
     renderPolaroids();
   }
   if (currentScreen === "record-complete-screen") {
     completeTimer = setTimeout(() => {
-      showScreen(screens.indexOf("record-home-screen"));
+      showScreen(screens.indexOf("record-page-screen"));
     }, 2000);
   }
   if (currentScreen === "playlist-loading-screen") {
@@ -111,6 +251,37 @@ function selectCard(card) {
   card.setAttribute("aria-selected", "true");
 }
 
+
+function resetEmotionStaff() {
+  staffNoteCount = 0;
+  emotionStaff?.querySelectorAll(".staff-note").forEach((note) => note.remove());
+}
+
+function addEmotionStaffNote(button) {
+  if (!emotionStaff) return;
+  const source = button.querySelector("img");
+  if (!source) return;
+
+  const positions = [
+    { left: 4, top: -8 },
+    { left: 73, top: 31 },
+    { left: 139, top: 15 },
+    { left: 203, top: 43 },
+    { left: 273, top: -8 },
+    { left: 325, top: 30 },
+    { left: 349, top: 12 },
+    { left: 362, top: 43 },
+  ];
+  const position = positions[staffNoteCount % positions.length];
+  const note = document.createElement("img");
+  note.className = "staff-note dynamic-staff-note";
+  note.src = source.src;
+  note.alt = "";
+  note.style.left = `${position.left}px`;
+  note.style.top = `${position.top}px`;
+  emotionStaff.append(note);
+  staffNoteCount += 1;
+}
 function selectEmotion(button) {
   for (const item of document.querySelectorAll(".emotion-choice")) {
     item.classList.remove("selected");
@@ -118,6 +289,7 @@ function selectEmotion(button) {
   }
   button.classList.add("selected");
   button.setAttribute("aria-selected", "true");
+  addEmotionStaffNote(button);
 }
 
 function polaroidPosition(index) {
@@ -136,7 +308,7 @@ function polaroidPosition(index) {
   };
 }
 
-function makePolaroid({ index, add = false }) {
+function makePolaroid({ index, add = false, log = null }) {
   const pos = polaroidPosition(index);
   const card = document.createElement("button");
   card.type = "button";
@@ -155,12 +327,17 @@ function makePolaroid({ index, add = false }) {
     card.dataset.action = "add-log";
     image.innerHTML = '<span class="add-mark">+</span><span class="add-text">기록하기</span>';
     caption.textContent = "";
-  } else if (logCount === 0) {
-    image.textContent = "";
-    caption.textContent = "";
+  } else if (log) {
+    if (log.photo) {
+      const photo = document.createElement("img");
+      photo.src = log.photo;
+      photo.alt = "기록 사진";
+      image.append(photo);
+    }
+    caption.textContent = log.caption || "오늘 감정과 상황을 기록했어요";
   } else {
-    image.textContent = "";
-    caption.textContent = pendingNote || "오늘 감정과 상황을 기록했어요";
+    image.innerHTML = '<span class="placeholder-text">지금 순간을<br />기록해보세요</span>';
+    caption.textContent = "";
   }
 
   const time = document.createElement("span");
@@ -176,17 +353,21 @@ function renderPolaroids() {
   const board = document.createElement("div");
   board.className = "polaroid-board";
 
-  const displayCount = logCount === 0 ? 3 : logCount;
-  const totalCards = displayCount + 1;
+  const minimumSlotsBeforeAdd = 3;
+  const displayCount = Math.max(minimumSlotsBeforeAdd, logs.length);
+  const addIndex = displayCount;
+  const totalCards = addIndex + 1;
+
   for (let index = 0; index < displayCount; index += 1) {
-    board.appendChild(makePolaroid({ index }));
+    board.appendChild(makePolaroid({ index, log: logs[index] || null }));
   }
-  board.appendChild(makePolaroid({ index: displayCount, add: true }));
+  board.appendChild(makePolaroid({ index: addIndex, add: true }));
 
   const rows = Math.ceil(totalCards / 4);
   board.style.minHeight = `${Math.max(760, rows * 720 + 120)}px`;
+  polaroidList.classList.toggle("scrollable", logs.length >= 4);
   polaroidList.appendChild(board);
-  playlistButton.classList.toggle("visible", logCount >= 4);
+  playlistButton.classList.toggle("visible", logs.length >= 4);
 }
 
 recordNoteInput?.addEventListener("keydown", (event) => {
@@ -197,8 +378,10 @@ recordNoteInput?.addEventListener("keydown", (event) => {
 
 
 hitSlider?.addEventListener("input", updateHitSlider);
+zoomSlider?.addEventListener("input", applyZoom);
 updateHitSlider();
 updateRecordDates();
+applyZoom();
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
@@ -220,13 +403,31 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "capture-photo") {
-    showScreen(screens.indexOf("note-screen"));
-    recordNoteInput.focus();
+    capturePhoto();
     return;
   }
 
+
+  if (action === "toggle-flash") {
+    flashEnabled = !flashEnabled;
+    flashButton?.classList.toggle("active", flashEnabled);
+    applyTorch();
+    return;
+  }
+
+  if (action === "switch-camera") {
+    cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+    startCamera();
+    return;
+  }
   if (action === "save-log") {
-    logCount += 1;
+    logs.push({
+      caption: pendingNote,
+      photo: capturedPhotoDataUrl,
+    });
+    logCount = logs.length;
+    pendingNote = "";
+    capturedPhotoDataUrl = "";
     recordNoteInput.value = "";
     showScreen(screens.indexOf("record-complete-screen"));
     return;
@@ -252,17 +453,37 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  if (target.classList.contains("choice-card")) {
-    selectCard(target);
+  const choiceCard = target.closest(".choice-card");
+  if (choiceCard) {
+    selectCard(choiceCard);
     return;
   }
 
-  if (target.classList.contains("emotion-choice")) {
-    selectEmotion(target);
+  const emotionChoice = target.closest(".emotion-choice");
+  if (emotionChoice) {
+    selectEmotion(emotionChoice);
   }
 });
 
 renderPolaroids();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
