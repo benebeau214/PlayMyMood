@@ -156,18 +156,32 @@
         <button class="playlist-button" id="playlist-button" type="button">플레이리스트 만들기</button>
       </section>
       <section class="screen capture-screen" id="capture-screen" aria-label="사진 촬영">
-        <header class="capture-header">
+        <header class="capture-header camera-capture-header">
           <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
-          <div class="record-title">
-            <h1>오늘의 기록</h1>
-            <p class="record-date">2026.07.08</p>
-          </div>
+          <p class="record-date capture-date">2026.07.08</p>
         </header>
-        <div class="camera-preview" aria-label="카메라 미리보기"></div>
-        <div class="capture-caption-bar"></div>
+        <div class="camera-preview" aria-label="카메라 미리보기">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <canvas id="camera-canvas" hidden></canvas>
+          <div class="camera-placeholder">카메라 권한을 허용해주세요</div>
+          <div class="camera-flash-overlay" aria-hidden="true"></div>
+        </div>
+        <div class="zoom-control" aria-label="카메라 배율 조절">
+          <input id="zoom-slider" class="zoom-slider" type="range" min="0.5" max="5" step="0.5" value="2" aria-label="카메라 배율" />
+          <div class="zoom-labels" aria-hidden="true">
+            <span data-zoom="0.5">0.5</span>
+            <span data-zoom="1">1</span>
+            <span data-zoom="2">2</span>
+            <span data-zoom="3">3</span>
+            <span data-zoom="4">4</span>
+            <span data-zoom="5">5</span>
+          </div>
+        </div>
+        <button class="camera-tool-button flash-button" type="button" data-action="toggle-flash" aria-label="플래시 켜기"><span></span></button>
         <button class="shutter-button" type="button" data-action="capture-photo" aria-label="사진 촬영">
-          <span></span>
+          <img src="./assets/camera-shutter-record.png" alt="" />
         </button>
+        <button class="camera-tool-button switch-camera-button" type="button" data-action="switch-camera" aria-label="카메라 전환"><img src="./assets/camera-switch-icon.png" alt="" /></button>
       </section>
 
       <section class="screen note-screen" id="note-screen" aria-label="기록 문장 입력">
@@ -182,35 +196,50 @@
           <label class="input-label" for="record-note">기록 문장</label>
           <input id="record-note" class="note-input" type="text" placeholder="지금 상황을 짧게 적어볼까요?" />
         </div>
-        <div class="keyboard-placeholder">키보드</div>
       </section>
 
       <section class="screen emotion-screen" id="emotion-screen" aria-label="감정 선택">
-        <header class="capture-header centered-only">
-          <div class="record-title">
-            <h1>오늘의 기록</h1>
-            <p class="record-date">2026.07.08</p>
-          </div>
+        <header class="emotion-header">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
+          <p class="record-date emotion-date"></p>
+          <button class="emotion-done-button" type="button" data-action="save-log">완료</button>
         </header>
-        <div class="emotion-panel">
-          <h1>이 순간의 감정을 담아주세요</h1>
-          <div class="emotion-photo">찍은 사진</div>
-          <div class="emotion-choice-grid" role="listbox" aria-label="감정 선택">
-            <button class="emotion-choice" type="button" role="option">감정1</button>
-            <button class="emotion-choice" type="button" role="option">감정2</button>
-            <button class="emotion-choice" type="button" role="option">감정3</button>
-            <button class="emotion-choice" type="button" role="option">감정4</button>
-            <button class="emotion-choice" type="button" role="option">감정5</button>
-            <button class="emotion-choice" type="button" role="option">감정6</button>
-          </div>
-        </div>
-        <button class="record-complete-button" type="button" data-action="save-log">기록 완료</button>
-      </section>
 
+        <article class="emotion-polaroid" aria-label="기록 미리보기">
+          <div class="emotion-photo-preview"></div>
+          <p class="emotion-caption-preview"></p>
+        </article>
+
+        <div class="emotion-staff" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <section class="emotion-panel" aria-label="감정 고르기">
+          <h1>지금의 감정은 어떠신가요?</h1>
+          <div class="emotion-choice-grid" role="listbox" aria-label="감정 선택">
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+          </div>
+        </section>
+      </section>
       <section class="screen record-complete-screen" id="record-complete-screen" aria-label="기록 완료">
         <div class="complete-message">
+          <img class="complete-note" src="./assets/music-note-yellow.png" alt="" />
           <h1>기록 완료!</h1>
-          <p>이따 또 만나요</p>
+          <p>또 만나요</p>
         </div>
       </section>
 
@@ -255,6 +284,16 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 
 
 

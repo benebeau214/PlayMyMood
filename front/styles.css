@@ -728,7 +728,7 @@ h1 {
 .note-screen,
 .emotion-screen,
 .record-complete-screen {
-  background: #fffaf5;
+  background: var(--app-bg);
 }
 
 .capture-screen.active,
@@ -740,97 +740,216 @@ h1 {
 
 .capture-header {
   position: relative;
-  height: 112px;
-  padding: 28px 13px 0;
+  height: 148px;
+  padding: 50px 13px 0;
+}
+
+.camera-capture-header .back-button {
+  position: absolute;
+  left: 18px;
+  top: 57px;
+}
+
+.capture-date {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55px;
+  margin: 0;
+  color: #0b0b0b;
+  font-size: 1.22rem;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
 }
 
 .capture-header.centered-only {
   padding-top: 47px;
 }
 
+.note-screen .record-title h1 { display: none; }
+.note-screen .record-title { top: 60px; }
+.note-screen .record-title p { font-size: 1.22rem; font-weight: 500; }
+
 .camera-preview {
   position: absolute;
   left: 0;
   right: 0;
-  top: 112px;
-  height: 296px;
-  border-radius: 0 0 6px 6px;
+  top: 148px;
+  height: 402px;
+  overflow: hidden;
   background: #e9e9e9;
 }
 
-.capture-caption-bar {
-  position: absolute;
-  left: 26px;
-  right: 8px;
-  bottom: 88px;
-  height: 20px;
-  border-radius: 999px;
-  background: #d9d9d9;
+.camera-preview video,
+.camera-preview .captured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
 }
 
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #8a8a8a;
+  font-size: 0.9rem;
+}
+
+.camera-preview.has-stream .camera-placeholder { display: none; }
+
+.camera-flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.78);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.camera-flash-overlay.flash { animation: camera-flash 180ms ease-out; }
+
+@keyframes camera-flash {
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.zoom-control {
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: 226px;
+  height: 36px;
+  border-radius: 999px;
+  background: #dfddd7;
+}
+
+.zoom-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 36px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.zoom-labels {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: center;
+  color: #0b0b0b;
+  font-size: 0.95rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.zoom-labels span.active { color: #ff4b1f; }
+
+.camera-tool-button {
+  position: absolute;
+  bottom: 119px;
+  width: 45px;
+  height: 45px;
+  border: 1.5px solid #d6d6d6;
+  border-radius: 50%;
+  background: transparent;
+  color: #5f5f5f;
+  cursor: pointer;
+}
+
+.camera-tool-button span,
+.camera-tool-button::before,
+.camera-tool-button::after {
+  position: absolute;
+  display: block;
+  content: "";
+}
+
+.flash-button { left: 31px; }
+.flash-button.active { border-color: #ffb49e; }
+.flash-button span {
+  left: 14px;
+  top: 10px;
+  width: 17px;
+  height: 26px;
+  background: #5f5f5f;
+  clip-path: polygon(38% 0, 85% 0, 62% 43%, 100% 43%, 28% 100%, 42% 58%, 0 58%);
+}
+.flash-button.active span { background: #ff4b1f; }
+
+.switch-camera-button { right: 31px; }
+.switch-camera-button img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 23px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
 .shutter-button {
   position: absolute;
   left: 50%;
-  bottom: 32px;
+  bottom: 105px;
   transform: translateX(-50%);
-  width: 47px;
-  height: 47px;
+  width: 83px;
+  height: 83px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #1b181a;
+  background: transparent;
   display: grid;
   place-items: center;
   cursor: pointer;
 }
 
-.shutter-button::after {
-  content: "";
-  position: absolute;
-  right: 6px;
-  bottom: 4px;
-  width: 14px;
-  height: 23px;
-  background: #f4f4f4;
-  transform: rotate(-35deg);
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
+.shutter-button img {
+  width: 83px;
+  height: 83px;
+  display: block;
 }
-
-.shutter-button span {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #c84b0d;
-  z-index: 1;
-}
-
 .note-polaroid {
   position: absolute;
-  left: 50%;
-  top: 116px;
-  transform: translateX(-50%);
-  width: 160px;
-  height: 235px;
-  padding: 8px 8px 29px;
+  left: 31px;
+  top: 132px;
+  width: 337px;
+  height: 396px;
+  padding: 16px 15px 62px;
   background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18);
 }
 
 .note-photo {
   width: 100%;
-  height: 201px;
+  height: 309px;
+  overflow: hidden;
   background: #e9e9e9;
+}
+
+.note-photo.has-photo { background-color: transparent; }
+
+.note-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .note-input {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  height: 18px;
+  left: 16px;
+  right: 16px;
+  bottom: 23px;
+  height: 24px;
   border: 0;
   outline: none;
   color: #575757;
-  font-size: 0.62rem;
+  font-size: 0.9rem;
   background: transparent;
 }
 
@@ -838,18 +957,6 @@ h1 {
   color: #c5c5c5;
 }
 
-.keyboard-placeholder {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 174px;
-  display: grid;
-  place-items: center;
-  background: #e9e9e9;
-  color: #0b0b0b;
-  font-size: 1rem;
-}
 
 .confirm-polaroid {
   height: 235px;
@@ -1233,30 +1340,6 @@ h1 {
   cursor: pointer;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .record-home-screen {
   background: #deb38a;
   overflow: hidden;
@@ -1382,18 +1465,365 @@ h1 {
 }
 
 
+/* Frame 5 emotion selection screen */
+.emotion-screen {
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.emotion-header {
+  position: relative;
+  height: 94px;
+}
+
+.emotion-header .back-button {
+  position: absolute;
+  left: 17px;
+  top: 58px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emotion-date {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58px;
+  margin: 0;
+  text-align: center;
+  font-size: 1.18rem;
+  font-weight: 500;
+}
+
+.emotion-done-button {
+  position: absolute;
+  right: 18px;
+  top: 53px;
+  width: 74px;
+  height: 32px;
+  border: 0;
+  border-radius: 18px;
+  background: #5b5b5b;
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.emotion-polaroid {
+  position: absolute;
+  left: 93px;
+  top: 106px;
+  width: 215px;
+  height: 252px;
+  padding: 14px 9px 31px;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.22);
+}
+
+.emotion-photo-preview {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: #e9e9e9;
+}
+
+.emotion-photo-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.emotion-caption-preview {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  margin: 0;
+  color: #111;
+  font-size: 0.48rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emotion-staff {
+  position: absolute;
+  left: 21px;
+  right: 21px;
+  top: 374px;
+  height: 89px;
+}
+
+.emotion-staff span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #555;
+}
+
+.emotion-staff span:nth-child(1) { top: 20px; }
+.emotion-staff span:nth-child(2) { top: 35px; }
+.emotion-staff span:nth-child(3) { top: 50px; }
+.emotion-staff span:nth-child(4) { top: 65px; }
+
+.staff-note {
+  position: absolute;
+  width: 42px;
+  height: 54px;
+  object-fit: contain;
+  z-index: 1;
+}
+
+.staff-note.note-1 { left: -7px; top: -8px; }
+.staff-note.note-2 { left: 69px; top: 13px; }
+.staff-note.note-3 { left: 118px; top: 5px; }
+.staff-note.note-4 { left: 190px; top: 31px; }
+.staff-note.note-5 { left: 252px; top: -8px; }
+.staff-note.note-6 { left: 306px; top: 14px; }
+.staff-note.note-7 { left: 331px; top: 33px; }
+.staff-note.note-8 { right: -7px; top: 9px; }
+
+.emotion-panel {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: auto;
+  bottom: 34px;
+  height: 348px;
+  padding: 12px 12px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 250, 238, 0.82);
+  text-align: center;
+}
+
+.emotion-panel h1 {
+  display: inline-block;
+  margin: 0 auto 18px;
+  padding: 5px 22px 6px;
+  border-radius: 999px;
+  background: #ffe8bd;
+  color: #333;
+  font-size: 0.96rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.emotion-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px 15px;
+  padding: 0;
+}
+
+.emotion-choice {
+  width: 100%;
+  height: 73px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.emotion-choice img {
+  width: 45px;
+  height: 47px;
+  object-fit: contain;
+  display: block;
+}
+
+.emotion-choice span {
+  line-height: 1;
+}
+
+.emotion-choice.selected img {
+  filter: drop-shadow(0 0 0 #111) drop-shadow(0 0 3px rgba(0, 0, 0, 0.35));
+}
+
+.record-complete-button {
+  display: none;
+}
+
+/* Code-built polaroids for today's record page */
+.record-page-screen .polaroid {
+  width: 228px;
+  height: 289px;
+  padding: 13px 12px 48px;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.22);
+  filter: none;
+  overflow: visible;
+}
+
+.record-page-screen .polaroid-image {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #e8e8e8;
+  color: #777;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.record-page-screen .polaroid-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.record-page-screen .polaroid-caption {
+  left: 13px;
+  right: 13px;
+  bottom: 16px;
+  color: #111;
+  font-size: 0.55rem;
+  line-height: 1.3;
+  transform: none;
+}
+
+.record-page-screen .placeholder-text {
+  display: block;
+  max-width: 150px;
+  color: #777;
+}
+
+.record-page-screen .add-polaroid .polaroid-image {
+  color: #9d9d9d;
+  font-size: 0.72rem;
+  align-content: center;
+  justify-items: center;
+  padding-top: 0;
+}
+
+.record-page-screen .add-polaroid .polaroid-image > span {
+  transform: none;
+}
+
+.record-page-screen .add-mark {
+  color: #9d9d9d;
+  font-size: 4.1rem;
+  font-weight: 300;
+  line-height: 0.75;
+  transform: none;
+}
+
+.record-page-screen .add-text {
+  color: #777;
+  font-size: 0.72rem;
+  transform: none;
+}
+
+/* Interactive emotion staff */
+.emotion-staff .staff-note {
+  width: 42px;
+  height: 54px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.emotion-choice.selected {
+  outline: 4px solid #111;
+  outline-offset: -3px;
+}
+
+.emotion-choice.selected img {
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.22));
+}
+
+/* Upright orange notes in emotion picker and staff */
+.emotion-choice img[src*="music-note-orange"],
+.emotion-staff .staff-note[src*="music-note-orange"] {
+  transform: rotate(18deg);
+  transform-origin: center center;
+}
+
+/* Orange note asset: upright by default, tilted only on intro */
+.orange-note {
+  transform: rotate(-18deg);
+  transform-origin: center center;
+}
+
+.genre-pop img,
+.genre-rock img,
+.emotion-choice img[src*="music-note-orange"],
+.emotion-staff .staff-note[src*="music-note-orange"] {
+  transform: none;
+}
+
+/* Intro orange note sizing fix for the tall orange asset */
+.intro-notes .orange-note {
+  right: 24px;
+  top: 104px;
+  width: auto;
+  height: 86px;
+  transform: rotate(-22deg);
+  transform-origin: center center;
+}
+
+/* Intro orange note should lean right */
+.intro-notes .orange-note {
+  transform: rotate(22deg);
+}
+
+/* Enable archive scrolling after four logs */
+.polaroid-scroll {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 97px;
+  bottom: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.polaroid-scroll.scrollable {
+  bottom: 116px;
+  overflow-y: auto;
+}
+
+.polaroid-scroll.scrollable .polaroid-board {
+  padding-bottom: 24px;
+}
 
 
+/* Record complete centered note */
+.complete-note {
+  display: block;
+  width: 82px;
+  height: auto;
+  margin: 0 auto 28px;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
+/* Slightly separate intro orange note from yellow note */
+.intro-notes .orange-note {
+  right: 8px;
+}
