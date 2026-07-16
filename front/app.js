@@ -61,7 +61,7 @@ function formatToday() {
 
 function updateRecordDates() {
   const today = formatToday();
-  for (const dateElement of document.querySelectorAll(".record-date")) {
+  for (const dateElement of document.querySelectorAll(".record-date, .playlist-date")) {
     dateElement.textContent = today;
   }
 }
@@ -367,7 +367,7 @@ function renderPolaroids() {
   board.style.minHeight = `${Math.max(760, rows * 720 + 120)}px`;
   polaroidList.classList.toggle("scrollable", logs.length >= 4);
   polaroidList.appendChild(board);
-  playlistButton.classList.toggle("visible", logs.length >= 4);
+  playlistButton.classList.add("visible");
 }
 
 recordNoteInput?.addEventListener("keydown", (event) => {
@@ -466,6 +466,8 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+
+
 
 
 

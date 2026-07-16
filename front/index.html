@@ -249,17 +249,18 @@
       </section>
 
       <section class="screen playlist-edit-screen" id="playlist-edit-screen" aria-label="오늘의 플레이리스트">
+        <button class="playlist-home-button" type="button" data-action="go-record-home" aria-label="홈으로 돌아가기"></button>
         <div class="playlist-edit-content">
           <h1>오늘의 PlayList</h1>
           <label class="input-label" for="playlist-title">플레이리스트 제목</label>
           <input id="playlist-title" class="playlist-title-input" type="text" placeholder="플레이리스트의 제목을 붙여주세요" />
           <div class="playlist-cover-preview" aria-label="앨범 커버 미리보기">
             <div class="cover-square"></div>
-            <div class="cover-disc"></div>
+            <img class="cover-disc" src="./assets/playlist-record.png" alt="" />
           </div>
-          <p class="playlist-date">2026.06.11</p>
+          <p class="playlist-date"></p>
           <p class="intro-label">한 줄 소개</p>
-          <input class="playlist-intro-input" type="text" value="행복한 나를 담은 플리입니다." />
+          <input class="playlist-intro-input" type="text" placeholder="짧은 소개글을 적어주세요" />
         </div>
         <section class="playlist-list" aria-label="플리 목록">
           <h2>플리 목록</h2>
@@ -268,7 +269,7 @@
           <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
           <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
         </section>
-        <button class="playlist-finish-button" type="button" data-action="complete-playlist">플레이스트 완성하기</button>
+        <button class="playlist-finish-button" type="button" data-action="complete-playlist">플레이리스트 만들기</button>
       </section>
 
       <section class="screen playlist-complete-screen" id="playlist-complete-screen" aria-label="플레이리스트 완성">
@@ -284,6 +285,12 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
+
+
 
 
 
