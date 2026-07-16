@@ -1849,8 +1849,9 @@ h1 {
   position: absolute;
   left: 31px;
   top: 55px;
-  width: 25px;
-  height: 25px;
+  width: 31px;
+  height: 31px;
+  padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -1860,26 +1861,12 @@ h1 {
 .playlist-home-button::before {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 9px;
-  width: 18px;
-  height: 14px;
-  border: 2px solid #111;
-  border-top: 0;
-  border-radius: 2px;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Cpath d='M14 29.5 29.2 15.7c1.6-1.45 4-1.45 5.6 0L50 29.5V50c0 3.31-2.69 6-6 6H20c-3.31 0-6-2.69-6-6V29.5Z' stroke='%23111111' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M25 55V41c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6v14' stroke='%23111111' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .playlist-home-button::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 14px;
-  height: 14px;
-  border-left: 2px solid #111;
-  border-top: 2px solid #111;
-  transform: rotate(45deg);
-  border-radius: 2px 0 0 0;
+  content: none;
 }
 
 .playlist-edit-content {
@@ -2123,3 +2110,258 @@ h1 {
 .playlist-cover-preview .cover-disc::after {
   content: none;
 }
+
+/* Archive bookshelf screen */
+.archive-screen {
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.archive-screen.active {
+  display: block;
+}
+
+.archive-header {
+  position: relative;
+  height: 134px;
+}
+
+.archive-home-button {
+  left: 31px;
+  top: 54px;
+}
+
+.archive-year-control {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 71px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  color: #111;
+}
+
+.archive-year-control span {
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.archive-year-control button {
+  width: 24px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.archive-scroll {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 134px;
+  bottom: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 20px 38px;
+}
+
+.archive-scroll::-webkit-scrollbar { width: 7px; }
+.archive-scroll::-webkit-scrollbar-track { background: transparent; }
+.archive-scroll::-webkit-scrollbar-thumb { background: #cfc7b8; border-radius: 999px; }
+
+.archive-turntable {
+  position: relative;
+  width: 268px;
+  height: 87px;
+  margin: 0 auto -2px;
+}
+
+.archive-player-base {
+  position: absolute;
+  left: 12px;
+  right: 0;
+  bottom: 0;
+  height: 31px;
+  background: #686868;
+  box-shadow: 16px -6px 0 #b9bec4, 11px -10px 0 #d4d7db;
+}
+
+.archive-player-disc {
+  position: absolute;
+  left: 28px;
+  bottom: 22px;
+  width: 169px;
+  height: 10px;
+  background: #111;
+  box-shadow: 54px -10px 0 -3px #111;
+}
+
+.archive-player-arm {
+  position: absolute;
+  right: 20px;
+  bottom: 32px;
+  width: 86px;
+  height: 5px;
+  background: #f4f4f4;
+  transform: rotate(0deg);
+}
+
+.archive-bookcase {
+  position: relative;
+  width: 100%;
+  min-height: 1800px;
+  padding: 60px 14px 24px;
+  background: #b2836e;
+}
+
+.archive-month {
+  position: relative;
+  margin: 0 0 42px;
+}
+
+.archive-month h2 {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  min-width: 67px;
+  height: 22px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid #f3d56d;
+  border-radius: 3px;
+  background: #fff5b2;
+  color: #111;
+  font-size: 0.78rem;
+  font-weight: 500;
+  z-index: 2;
+}
+
+.archive-shelf {
+  position: relative;
+  height: 166px;
+  background: #7b4d36;
+  border-left: 13px solid #6c3f2c;
+  border-right: 13px solid #6c3f2c;
+  border-top: 10px solid #6c3f2c;
+  overflow: hidden;
+}
+
+.archive-shelf::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 38px;
+  background: rgba(92, 52, 35, 0.35);
+}
+
+.archive-shelf::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: -34px;
+  height: 68px;
+  background: rgba(74, 39, 27, 0.28);
+  transform: perspective(120px) rotateX(46deg);
+  transform-origin: top center;
+}
+
+.archive-pill {
+  border: 0;
+  cursor: pointer;
+}
+
+/* Archive top player image and current-month scroll support */
+.archive-turntable {
+  display: block;
+  width: 268px;
+  height: auto;
+  margin: 45px auto -2px;
+  object-fit: contain;
+}
+
+.archive-player-base,
+.archive-player-disc,
+.archive-player-arm {
+  display: none;
+}
+
+/* CSS-drawn archived LPs */
+.archive-lp {
+  position: absolute;
+  bottom: 30px;
+  width: 22px;
+  height: 128px;
+  background: #f8f1c6;
+  box-shadow: inset 5px 0 #ff4d00, inset 11px 0 #fff, inset 16px 0 #8b241a;
+}
+
+.archive-lp::before,
+.archive-lp::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.archive-lp::before {
+  left: 5px;
+  width: 5px;
+  background: #dcecf8;
+}
+
+.archive-lp::after {
+  right: 0;
+  width: 6px;
+  background: #2e5136;
+}
+
+.archive-lp-1 { transform: rotate(0deg); }
+.archive-lp-2 { transform: rotate(-10deg); background: #fdf6df; box-shadow: inset 5px 0 #ff4d00, inset 11px 0 #dcecf8, inset 17px 0 #7e251d; }
+.archive-lp-3 { transform: rotate(-7deg); background: #fff7db; box-shadow: inset 4px 0 #ff4d00, inset 10px 0 #ef8150, inset 17px 0 #fff; }
+.archive-lp-4 { transform: rotate(12deg); background: #376a43; box-shadow: inset 8px 0 #376a43, inset 14px 0 #ed585d, inset 19px 0 #7e251d; }
+.archive-lp-5 { transform: rotate(8deg); background: #ff4d00; box-shadow: inset 5px 0 #7e251d, inset 12px 0 #ff4d00, inset 18px 0 #dcecf8; }
+.archive-lp-6 { transform: rotate(0deg); background: #f7e9b8; box-shadow: inset 5px 0 #8b241a, inset 11px 0 #fff, inset 17px 0 #bdd6e8; }
+
+/* Archive month carousel and playlist detail */
+.archive-month-screen,
+.archive-playlist-detail-screen { background: var(--app-bg); overflow: hidden; }
+.archive-month-screen.active,
+.archive-playlist-detail-screen.active { display: block; }
+.archive-month-header { position: absolute; left: 0; right: 0; top: 73px; display: flex; justify-content: center; align-items: center; gap: 24px; color: #111; font-size: 1.5rem; font-weight: 500; }
+.archive-month-nav { width: 24px; height: 28px; border: 0; background: transparent; color: #111; font: inherit; cursor: pointer; }
+.archive-month-carousel { position: absolute; left: 0; right: 0; top: 280px; height: 250px; display: flex; gap: 40px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 102px; scrollbar-width: none; }
+.archive-month-carousel::-webkit-scrollbar { display: none; }
+.archive-album-card { position: relative; flex: 0 0 197px; height: 252px; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; }
+.archive-album-date { position: absolute; left: 0; right: 0; top: 0; color: #666; font-size: 1rem; text-align: center; }
+.archive-album-cover { position: absolute; left: 0; top: 55px; width: 197px; height: 197px; background: #ff6b00; }
+.archive-empty-message { flex: 0 0 100%; margin: 95px 0 0; color: #777; text-align: center; font-size: 1rem; }
+.archive-month-copy { position: absolute; left: 26px; right: 26px; top: 565px; text-align: center; }
+.archive-month-copy h1,
+.archive-detail-name { margin: 0; color: #111; font-size: 1.18rem; font-weight: 700; }
+.archive-month-copy p { margin: 17px 0 0; color: #444; font-size: 0.95rem; line-height: 1.35; }
+.archive-month-button { width: 100%; height: 100%; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.archive-detail-date { position: absolute; left: 0; right: 0; top: 180px; margin: 0; color: #666; text-align: center; font-size: 1rem; }
+.archive-detail-cover { position: absolute; left: 88px; top: 211px; width: 245px; height: 166px; border: 0; background: transparent; cursor: pointer; }
+.archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: #ff6b00; }
+.archive-detail-record { position: absolute; right: 0; top: 5px; z-index: 1; width: 154px; height: 154px; object-fit: contain; }
+.archive-detail-name { position: absolute; left: 0; right: 0; top: 421px; text-align: center; }
+.archive-detail-tracks { position: absolute; left: 17px; right: 17px; top: 456px; border-top: 1px solid #d6d0c5; }
+.archive-detail-track { display: grid; grid-template-columns: 52px 1fr; gap: 18px; align-items: center; min-height: 76px; border-bottom: 1px solid #d6d0c5; }
+.archive-detail-track span { width: 52px; height: 52px; background: #d9d9d9; }
+.archive-detail-track p { margin: 0; color: #111; font-size: 0.95rem; line-height: 1.15; }
+.archive-listen-button { position: absolute; left: 20px; right: 20px; bottom: 54px; height: 58px; border: 0; border-radius: 8px; background: #5b5b5b; color: #fff; font: inherit; font-size: 1rem; font-weight: 600; }
+.archive-inner-back { position: absolute; left: 28px; top: 75px; z-index: 5; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: #111; font: inherit; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+
+

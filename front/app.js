@@ -7,6 +7,9 @@
   "cover-screen",
   "finish-screen",
   "record-home-screen",
+  "archive-screen",
+  "archive-month-screen",
+  "archive-playlist-detail-screen",
   "record-page-screen",
   "capture-screen",
   "note-screen",
@@ -20,6 +23,10 @@
 let currentIndex = 0;
 let logCount = 0;
 const logs = [];
+const archivePlaylistCounts = Array(12).fill(0);
+const archivePlaylists = Array.from({ length: 12 }, () => []);
+let activeArchiveMonth = getCurrentMonthNumber();
+let activeArchivePlaylistIndex = 0;
 let pendingNote = "";
 let completeTimer = null;
 let playlistTimer = null;
@@ -40,6 +47,15 @@ const flashButton = document.querySelector(".flash-button");
 const emotionPhotoPreview = document.querySelector(".emotion-photo-preview");
 const emotionCaptionPreview = document.querySelector(".emotion-caption-preview");
 const emotionStaff = document.querySelector(".emotion-staff");
+const playlistTitleInput = document.getElementById("playlist-title");
+const playlistIntroInput = document.querySelector(".playlist-intro-input");
+const archiveMonthTitle = document.getElementById("archive-month-title");
+const archiveMonthCarousel = document.getElementById("archive-month-carousel");
+const archiveMonthPlaylistTitle = document.getElementById("archive-month-playlist-title");
+const archiveMonthPlaylistDesc = document.getElementById("archive-month-playlist-desc");
+const archiveDetailTitle = document.getElementById("archive-detail-title");
+const archiveDetailDate = document.getElementById("archive-detail-date");
+const archiveDetailName = document.getElementById("archive-detail-name");
 let cameraStream = null;
 let cameraFacingMode = "environment";
 let flashEnabled = false;
@@ -184,6 +200,110 @@ function updateHitSlider() {
   hitSlider.style.setProperty("--hit-value", `${percent}%`);
   hitSliderWrap?.style.setProperty("--hit-value", `${percent}%`);
 }
+
+
+function getCurrentMonthNumber() {
+  return Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    month: "numeric",
+  }).format(new Date()));
+}
+
+function renderArchiveShelves() {
+  const shelves = document.querySelectorAll(".archive-shelf");
+  shelves.forEach((shelf, monthIndex) => {
+    shelf.replaceChildren();
+    const count = archivePlaylistCounts[monthIndex] || 0;
+    for (let index = 0; index < count; index += 1) {
+      const lp = document.createElement("span");
+      lp.className = `archive-lp archive-lp-${(index % 6) + 1}`;
+      lp.style.left = `${18 + index * 24}px`;
+      lp.style.zIndex = String(index + 1);
+      shelf.append(lp);
+    }
+  });
+}
+
+function addPlaylistToArchive() {
+  const month = getCurrentMonthNumber();
+  archivePlaylists[month - 1].push(createArchivePlaylist());
+  archivePlaylistCounts[month - 1] = archivePlaylists[month - 1].length;
+  renderArchiveShelves();
+}
+
+function formatArchiveMonth(month) {
+  const year = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  }).format(new Date());
+  return `${year}.${String(month).padStart(2, "0")}`;
+}
+
+function createArchivePlaylist() {
+  const title = playlistTitleInput?.value.trim() || "제목 없는 플리";
+  const desc = playlistIntroInput?.value.trim() || "짧은 소개글이 아직 없어요.";
+  return {
+    date: formatToday(),
+    title,
+    desc,
+  };
+}
+
+function renderArchiveMonthView(month = activeArchiveMonth) {
+  activeArchiveMonth = month;
+  const playlists = archivePlaylists[month - 1] || [];
+  if (archiveMonthTitle) archiveMonthTitle.textContent = formatArchiveMonth(month);
+  archiveMonthCarousel?.replaceChildren();
+
+  if (!playlists.length) {
+    const empty = document.createElement("p");
+    empty.className = "archive-empty-message";
+    empty.textContent = "아직 만든 플리가 없어요";
+    archiveMonthCarousel?.append(empty);
+    if (archiveMonthPlaylistTitle) archiveMonthPlaylistTitle.textContent = "";
+    if (archiveMonthPlaylistDesc) archiveMonthPlaylistDesc.textContent = "";
+    return;
+  }
+
+  playlists.forEach((playlist, index) => {
+    const card = document.createElement("button");
+    card.className = "archive-album-card";
+    card.type = "button";
+    card.dataset.action = "open-archive-detail";
+    card.dataset.index = String(index);
+    card.innerHTML = `<span class="archive-album-date">${playlist.date}</span><span class="archive-album-cover"></span>`;
+    archiveMonthCarousel?.append(card);
+  });
+
+  const first = playlists[0];
+  if (archiveMonthPlaylistTitle) archiveMonthPlaylistTitle.textContent = first.title;
+  if (archiveMonthPlaylistDesc) archiveMonthPlaylistDesc.textContent = first.desc;
+  requestAnimationFrame(() => {
+    archiveMonthCarousel?.scrollTo({ left: 0, behavior: "auto" });
+  });
+}
+
+function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
+  const playlists = archivePlaylists[activeArchiveMonth - 1] || [];
+  const playlist = playlists[index] || playlists[0] || createArchivePlaylist();
+  activeArchivePlaylistIndex = index;
+  if (archiveDetailTitle) archiveDetailTitle.textContent = formatArchiveMonth(activeArchiveMonth);
+  if (archiveDetailDate) archiveDetailDate.textContent = playlist.date;
+  if (archiveDetailName) archiveDetailName.textContent = playlist.title;
+}
+function scrollArchiveToCurrentMonth() {
+  const archiveScroll = document.querySelector(".archive-scroll");
+  if (!archiveScroll) return;
+
+  const month = getCurrentMonthNumber();
+  const monthSection = document.querySelectorAll(".archive-month")[month - 1];
+  if (!monthSection) return;
+
+  requestAnimationFrame(() => {
+    const targetTop = monthSection.offsetTop - (archiveScroll.clientHeight - monthSection.offsetHeight) / 2;
+    archiveScroll.scrollTo({ top: Math.max(0, targetTop), behavior: "auto" });
+  });
+}
 function showScreen(index) {
   if (completeTimer) {
     clearTimeout(completeTimer);
@@ -216,6 +336,16 @@ function showScreen(index) {
   if (currentScreen === "emotion-screen") {
     updateEmotionPreview();
     resetEmotionStaff();
+  }
+  if (currentScreen === "archive-screen") {
+    renderArchiveShelves();
+    scrollArchiveToCurrentMonth();
+  }
+  if (currentScreen === "archive-month-screen") {
+    renderArchiveMonthView(activeArchiveMonth);
+  }
+  if (currentScreen === "archive-playlist-detail-screen") {
+    renderArchivePlaylistDetail(activeArchivePlaylistIndex);
   }
   if (currentScreen === "record-page-screen") {
     renderPolaroids();
@@ -397,6 +527,24 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "open-archive") {
+    showScreen(screens.indexOf("archive-screen"));
+    return;
+  }
+
+  if (action === "open-archive-month") {
+    activeArchiveMonth = Number(target.dataset.month || target.closest(".archive-month")?.dataset.month || getCurrentMonthNumber());
+    activeArchivePlaylistIndex = 0;
+    showScreen(screens.indexOf("archive-month-screen"));
+    return;
+  }
+
+  if (action === "open-archive-detail") {
+    activeArchivePlaylistIndex = Number(target.closest("[data-index]")?.dataset.index || 0);
+    showScreen(screens.indexOf("archive-playlist-detail-screen"));
+    return;
+  }
+
   if (action === "add-log") {
     showScreen(screens.indexOf("capture-screen"));
     return;
@@ -434,6 +582,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "complete-playlist") {
+    addPlaylistToArchive();
     showScreen(screens.indexOf("playlist-complete-screen"));
     return;
   }
@@ -466,6 +615,17 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+
+
+
+
+
+
+
+
+
+
+
 
 
 
