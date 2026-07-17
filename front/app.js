@@ -1,4 +1,17 @@
-﻿const screens = [
+﻿const DESIGN_WIDTH = 393;
+const DESIGN_HEIGHT = 852;
+
+function updateAppScale() {
+  const viewportWidth = window.innerWidth || DESIGN_WIDTH;
+  const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
+  const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1.15);
+  document.documentElement.style.setProperty("--app-scale", String(scale));
+}
+
+updateAppScale();
+window.addEventListener("resize", updateAppScale);
+window.addEventListener("orientationchange", updateAppScale);
+const screens = [
   "login-screen",
   "name-screen",
   "era-screen",
@@ -748,6 +761,11 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "back") {
+    const currentScreen = screens[currentIndex];
+    if (currentScreen === "record-page-screen") {
+      showScreen(screens.indexOf("record-home-screen"));
+      return;
+    }
     showScreen(currentIndex - 1);
     return;
   }
@@ -765,6 +783,8 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+
+
 
 
 
