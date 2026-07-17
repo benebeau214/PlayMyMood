@@ -1300,43 +1300,50 @@ h1 {
   cursor: pointer;
 }
 
+.complete-home-button {
+  left: 31px;
+  top: 58px;
+}
+
 .complete-cover {
   position: absolute;
   left: 50%;
-  top: 248px;
+  top: 302px;
   transform: translateX(-50%);
   width: 142px;
   height: 142px;
-  background: #b7b7b7;
+  background: #d76568;
+  box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18);
 }
 
 .playlist-complete-screen h1 {
   position: absolute;
   left: 0;
   right: 0;
-  top: 499px;
+  top: 500px;
+  margin: 0;
   text-align: center;
   font-size: 1.28rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .complete-actions {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 65px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  left: 20px;
+  right: 20px;
+  bottom: 61px;
 }
 
 .complete-actions button {
-  height: 52px;
+  width: 100%;
+  height: 58px;
   border: 0;
-  border-radius: 7px;
-  background: #d1d1d1;
-  color: #0b0b0b;
+  border-radius: 8px;
+  background: #5b5b5b;
+  color: #fff;
+  font: inherit;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -2363,5 +2370,711 @@ h1 {
 .archive-detail-track p { margin: 0; color: #111; font-size: 0.95rem; line-height: 1.15; }
 .archive-listen-button { position: absolute; left: 20px; right: 20px; bottom: 54px; height: 58px; border: 0; border-radius: 8px; background: #5b5b5b; color: #fff; font: inherit; font-size: 1rem; font-weight: 600; }
 .archive-inner-back { position: absolute; left: 28px; top: 75px; z-index: 5; width: 32px; height: 32px; padding: 0; border: 0; background: transparent; color: #111; font: inherit; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.track-log-modal[hidden] {
+  display: none;
+}
+
+.track-log-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  background: rgba(244, 238, 227, 0.68);
+}
+
+.track-log-card {
+  position: absolute;
+  left: 42px;
+  right: 42px;
+  top: 126px;
+  height: 650px;
+  border-radius: 12px;
+  background: #ede4d0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.track-log-close {
+  position: absolute;
+  right: 21px;
+  top: 22px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #000;
+  font: inherit;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.track-log-date {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50px;
+  margin: 0;
+  color: #111;
+  text-align: center;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.track-log-polaroid {
+  position: absolute;
+  left: 50%;
+  top: 100px;
+  width: 246px;
+  height: 295px;
+  margin: 0;
+  padding: 13px 13px 42px;
+  background: #fffdf8;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.22);
+  transform: translateX(-50%);
+}
+
+.track-log-photo {
+  width: 100%;
+  height: 220px;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+
+.track-log-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.track-log-caption {
+  margin: 12px 0 0;
+  color: #111;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-log-card h2 {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 430px;
+  margin: 0;
+  color: #111;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.track-log-staff {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 492px;
+  height: 90px;
+}
+
+.track-log-staff span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #777;
+}
+
+.track-log-staff span:nth-child(1) { top: 23px; }
+.track-log-staff span:nth-child(2) { top: 38px; }
+.track-log-staff span:nth-child(3) { top: 53px; }
+.track-log-staff span:nth-child(4) { top: 68px; }
+
+.track-log-staff .note {
+  position: absolute;
+  width: 44px;
+  height: 58px;
+  object-fit: contain;
+}
+
+.track-log-staff .note-1 { left: -10px; top: -5px; }
+.track-log-staff .note-2 { left: 68px; top: 7px; }
+.track-log-staff .note-3 { left: 124px; top: 12px; }
+.track-log-staff .note-4 { left: 191px; top: 32px; }
+.track-log-staff .note-5 { left: 246px; top: -4px; }
+.track-log-staff .note-6 { right: -8px; top: 15px; }
+.track-log-staff .note-7 { left: 20px; top: 31px; }
+.track-log-staff .note-8 { right: 28px; top: 35px; }
+.playlist-player-screen {
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.playlist-player-screen.active {
+  display: block;
+}
+
+.player-back-button {
+  position: absolute;
+  left: 16px;
+  top: 82px;
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.player-date {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 79px;
+  margin: 0;
+  color: #777;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.player-hero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 130px;
+  height: 302px;
+}
+
+.player-record-board {
+  position: absolute;
+  left: 90px;
+  top: 0;
+  width: 304px;
+  height: 205px;
+  overflow: hidden;
+  border-radius: 4px 0 0 4px;
+  background: #d39b70;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+}
+
+.player-record-board img {
+  position: absolute;
+  left: 44px;
+  top: 14px;
+  width: 178px;
+  height: 178px;
+  object-fit: contain;
+}
+
+.player-record-board::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 37px;
+  width: 78px;
+  height: 132px;
+  border-right: 9px solid #fff;
+  border-top: 9px solid #fff;
+  transform: skewX(-12deg);
+}
+
+.player-log-polaroid {
+  position: absolute;
+  left: 31px;
+  top: 108px;
+  z-index: 3;
+  width: 108px;
+  height: 122px;
+  margin: 0;
+  padding: 8px 8px 22px;
+  background: #fffdf9;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.24);
+}
+
+.player-log-photo {
+  width: 100%;
+  height: 78px;
+  background: #e8e8e8;
+  overflow: hidden;
+}
+
+.player-log-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.player-log-polaroid p {
+  margin: 7px 0 0;
+  color: #111;
+  font-size: 0.43rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-note {
+  position: absolute;
+  z-index: 4;
+  width: 44px;
+  height: 58px;
+  object-fit: contain;
+}
+
+.player-note-orange {
+  left: 37px;
+  top: 33px;
+}
+
+.player-note-yellow {
+  right: 16px;
+  top: 187px;
+}
+
+.player-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 433px;
+  margin: 0;
+  color: #111;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.player-track-list {
+  position: absolute;
+  left: 36px;
+  right: 13px;
+  top: 468px;
+  border-top: 1px solid #d6d0c5;
+}
+
+.player-track {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  min-height: 65px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid #d6d0c5;
+  background: transparent;
+  color: #777;
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-track span {
+  width: 52px;
+  height: 52px;
+  background: #e1e1e1;
+}
+
+.player-track strong {
+  color: #777;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.player-controls {
+  position: absolute;
+  left: 69px;
+  right: 49px;
+  bottom: 41px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.player-controls button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: #666;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.player-controls .player-play {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #666;
+  color: #fff;
+  font-size: 1.25rem;
+  text-indent: 3px;
+}
+
+.track-log-modal.player-log-modal .track-log-card {
+  position: absolute;
+  left: 42px;
+  right: 42px;
+  top: 126px;
+  height: 650px;
+  border-radius: 12px;
+  background: #ede4d0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.track-log-modal.player-log-modal .track-log-date {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50px;
+  margin: 0;
+  color: #111;
+  text-align: center;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.track-log-modal.player-log-modal .track-log-polaroid {
+  position: absolute;
+  left: 50%;
+  top: 100px;
+  width: 246px;
+  height: 295px;
+  margin: 0;
+  padding: 13px 13px 42px;
+  background: #fffdf8;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.22);
+  transform: translateX(-50%);
+}
+
+.track-log-modal.player-log-modal .track-log-photo {
+  width: 100%;
+  height: 220px;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+
+.track-log-modal.player-log-modal .track-log-caption {
+  margin-top: 7px;
+  font-size: 0.46rem;
+}
+
+.track-log-modal.player-log-modal .track-log-card h2 {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 430px;
+  margin: 0;
+  color: #111;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.track-log-modal.player-log-modal .track-log-staff {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 492px;
+  height: 90px;
+}
+
+/* Playlist player layout tuned to Frame 10 */
+.playlist-player-screen .player-back-button {
+  left: 34px;
+  top: 104px;
+}
+
+.playlist-player-screen .player-date {
+  top: 105px;
+  font-size: 0.78rem;
+}
+
+.playlist-player-screen .player-hero {
+  top: 137px;
+  height: 268px;
+}
+
+.playlist-player-screen .player-record-board {
+  left: 111px;
+  top: 0;
+  width: 313px;
+  height: 205px;
+}
+
+.playlist-player-screen .player-record-board img {
+  left: 21px;
+  top: 15px;
+  width: 178px;
+  height: 178px;
+}
+
+.playlist-player-screen .player-record-board::after {
+  right: 4px;
+  top: 78px;
+  width: 82px;
+  height: 87px;
+  border-right-width: 9px;
+  border-top-width: 9px;
+}
+
+.playlist-player-screen .player-log-polaroid {
+  left: 31px;
+  top: 111px;
+  width: 114px;
+  height: 142px;
+  padding: 7px 7px 26px;
+}
+
+.playlist-player-screen .player-log-photo {
+  height: 100px;
+}
+
+.playlist-player-screen .player-log-polaroid p {
+  margin-top: 8px;
+  font-size: 0.38rem;
+}
+
+.playlist-player-screen .player-note-orange {
+  left: 49px;
+  top: 51px;
+  width: 38px;
+  height: 50px;
+}
+
+.playlist-player-screen .player-note-yellow {
+  right: 39px;
+  top: 181px;
+  width: 38px;
+  height: 50px;
+}
+
+.playlist-player-screen .player-title {
+  top: 415px;
+  font-size: 1.06rem;
+}
+
+.playlist-player-screen .player-track-list {
+  left: 49px;
+  right: 20px;
+  top: 456px;
+}
+
+.playlist-player-screen .player-track {
+  min-height: 64px;
+  grid-template-columns: 52px 1fr;
+  gap: 17px;
+  padding: 7px 0;
+}
+
+.playlist-player-screen .player-track strong {
+  font-size: 0.86rem;
+}
+
+.playlist-player-screen .player-controls {
+  left: 84px;
+  right: 61px;
+  bottom: 48px;
+}
+
+.playlist-player-screen .player-controls .player-play {
+  width: 58px;
+  height: 58px;
+}
+
+
+/* Use record-player asset on playlist player screen */
+.playlist-player-screen .player-record-board {
+  left: 92px;
+  top: -8px;
+  width: 350px;
+  height: 232px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.playlist-player-screen .player-record-board img {
+  left: 0;
+  top: 0;
+  width: 350px;
+  height: auto;
+  object-fit: contain;
+}
+
+.playlist-player-screen .player-record-board::after {
+  content: none;
+}
+/* Center playlist rows in player screen */
+.playlist-player-screen .player-track-list {
+  left: 20px;
+  right: 20px;
+  top: 456px;
+}
+
+.playlist-player-screen .player-track {
+  grid-template-columns: 78px 1fr;
+  gap: 25px;
+  min-height: 74px;
+  padding: 9px 0;
+}
+
+.playlist-player-screen .player-track span {
+  width: 52px;
+  height: 52px;
+  margin-left: 0;
+}
+
+.playlist-player-screen .player-track strong {
+  color: #111;
+  font-size: 1rem;
+  line-height: 1.12;
+}
+
+
+.playlist-player-screen .player-log-polaroid {
+  left: 30px;
+  top: 107px;
+  width: 148px;
+  height: 190px;
+  padding: 9px 9px 34px;
+}
+
+.playlist-player-screen .player-log-photo {
+  height: 146px;
+}
+
+.playlist-player-screen .player-log-polaroid p {
+  margin-top: 8px;
+  font-size: 0.46rem;
+}
+/* Compact modal when opened from the playlist player screen */
+.track-log-modal.player-log-modal .track-log-card {
+  top: 161px;
+  height: 548px;
+}
+
+.track-log-modal.player-log-modal .track-log-date {
+  top: 31px;
+  font-size: 0.82rem;
+}
+
+.track-log-modal.player-log-modal .track-log-polaroid {
+  top: 58px;
+  width: 158px;
+  height: 202px;
+  padding: 9px 9px 30px;
+}
+
+.track-log-modal.player-log-modal .track-log-photo {
+  height: 142px;
+}
+
+.track-log-modal.player-log-modal .track-log-caption {
+  margin-top: 7px;
+  font-size: 0.46rem;
+}
+
+.track-log-modal.player-log-modal .track-log-card h2 {
+  top: 304px;
+  font-size: 0.8rem;
+}
+
+.track-log-modal.player-log-modal .track-log-staff {
+  top: 349px;
+}
+.player-nav-button.home-mode {
+  width: 31px;
+  height: 31px;
+  font-size: 0;
+}
+
+.player-nav-button.home-mode::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Cpath d='M14 29.5 29.2 15.7c1.6-1.45 4-1.45 5.6 0L50 29.5V50c0 3.31-2.69 6-6 6H20c-3.31 0-6-2.69-6-6V29.5Z' stroke='%23111111' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M25 55V41c0-3.31 2.69-6 6-6h2c3.31 0 6 2.69 6 6v14' stroke='%23111111' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+/* Optical centering for record home buttons */
+.record-home-screen .record-button,
+.record-home-screen .archive-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 4px;
+  line-height: 1;
+}
+/* Raise playlist player header and hero to avoid title overlap */
+.playlist-player-screen .player-back-button {
+  left: 31px;
+  top: 55px;
+}
+
+.playlist-player-screen .player-date {
+  top: 58px;
+}
+
+.playlist-player-screen .player-hero {
+  top: 95px;
+}
+
+.playlist-player-screen .player-record-board {
+  top: -2px;
+}
+
+.playlist-player-screen .player-log-polaroid {
+  top: 112px;
+}
+
+.playlist-player-screen .player-title {
+  top: 402px;
+  z-index: 5;
+}
+
+.playlist-player-screen .player-track-list {
+  top: 443px;
+}
+/* Lower player title/list and center playback controls */
+.playlist-player-screen .player-title {
+  top: 426px;
+}
+
+.playlist-player-screen .player-track-list {
+  top: 468px;
+}
+
+.playlist-player-screen .player-controls {
+  left: 50%;
+  right: auto;
+  bottom: 48px;
+  width: 260px;
+  transform: translateX(-50%);
+}
+/* Fine tune playlist player hero positions */
+.playlist-player-screen .player-record-board {
+  left: 118px;
+  top: 14px;
+  width: 286px;
+  height: 190px;
+}
+
+.playlist-player-screen .player-record-board img {
+  width: 286px;
+}
+
+.playlist-player-screen .player-log-polaroid {
+  left: 20px;
+  top: 132px;
+}
+
+
+
+
 
 
