@@ -203,7 +203,33 @@
           <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
           <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
         </section>
-        <button class="archive-listen-button" type="button">Playlist 들으러 가기</button>
+        <button class="archive-listen-button" type="button" data-action="open-playlist-player" data-player-entry="archive">Playlist 들으러 가기</button>
+      </section>
+      <section class="screen playlist-player-screen" id="playlist-player-screen" aria-label="플레이리스트 재생">
+        <button class="player-nav-button player-back-button" type="button" data-action="player-nav" aria-label="뒤로">←</button>
+        <p class="player-date" id="player-date">2026.06.11</p>
+        <div class="player-hero" aria-label="플레이리스트 커버">
+          <div class="player-record-board">
+            <img src="./assets/record-player-straight.png" alt="" />
+          </div>
+          <article class="player-log-polaroid" aria-label="대표 기록">
+            <div class="player-log-photo" id="player-log-photo"></div>
+            <p id="player-log-caption">오늘 하루를 기록했어요</p>
+          </article>
+          <img class="player-note player-note-orange" src="./assets/music-note-orange.png" alt="" />
+          <img class="player-note player-note-yellow" src="./assets/music-note-yellow.png" alt="" />
+        </div>
+        <h1 class="player-title" id="player-title">커피 맛</h1>
+        <section class="player-track-list" aria-label="플리 목록">
+          <button class="player-track" type="button" data-action="open-track-log" data-track-index="0"><span></span><strong>Lemonade<br />aespa</strong></button>
+          <button class="player-track" type="button" data-action="open-track-log" data-track-index="1"><span></span><strong>Lemonade<br />aespa</strong></button>
+          <button class="player-track" type="button" data-action="open-track-log" data-track-index="2"><span></span><strong>Lemonade<br />aespa</strong></button>
+        </section>
+        <div class="player-controls" aria-label="재생 컨트롤">
+          <button type="button" aria-label="이전 곡">◀◀</button>
+          <button class="player-play" type="button" aria-label="재생">▶</button>
+          <button type="button" aria-label="다음 곡">▶▶</button>
+        </div>
       </section>
       <section class="screen record-page-screen" id="record-page-screen" aria-label="오늘의 기록">
         <header class="record-header">
@@ -326,20 +352,35 @@
         </div>
         <section class="playlist-list" aria-label="플리 목록">
           <h2>플리 목록</h2>
-          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
-          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
-          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
-          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" aria-label="더보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" data-action="open-track-log" data-track-index="0" aria-label="첫 번째 노래 로그 보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" data-action="open-track-log" data-track-index="1" aria-label="두 번째 노래 로그 보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" data-action="open-track-log" data-track-index="2" aria-label="세 번째 노래 로그 보기">•••</button></div>
+          <div class="track-row"><span class="track-thumb"></span><span>Lemonade<br />aespa</span><button type="button" data-action="open-track-log" data-track-index="3" aria-label="네 번째 노래 로그 보기">•••</button></div>
         </section>
+        <div class="track-log-modal" id="track-log-modal" hidden>
+          <div class="track-log-card" role="dialog" aria-modal="true" aria-label="노래와 연결된 기록">
+            <button class="track-log-close" type="button" data-action="close-track-log" aria-label="닫기">×</button>
+            <p class="track-log-date" id="track-log-date">2026.07.08 16:00</p>
+            <article class="track-log-polaroid">
+              <div class="track-log-photo" id="track-log-photo"></div>
+              <p class="track-log-caption" id="track-log-caption">오늘 즐거웠다</p>
+            </article>
+            <h2>My Mood</h2>
+            <div class="track-log-staff" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+
+            </div>
+          </div>
+        </div>
         <button class="playlist-finish-button" type="button" data-action="complete-playlist">플레이리스트 만들기</button>
       </section>
 
       <section class="screen playlist-complete-screen" id="playlist-complete-screen" aria-label="플레이리스트 완성">
+        <button class="playlist-home-button complete-home-button" type="button" data-action="go-record-home" aria-label="홈으로 돌아가기"></button>
         <div class="complete-cover"></div>
         <h1>오늘의 playList 완성</h1>
         <div class="complete-actions">
-          <button type="button" data-action="go-record-home">홈으로 돌아가기</button>
-          <button type="button">플리 들으러 가기</button>
+          <button type="button" data-action="open-playlist-player" data-player-entry="home">Playlist 들으러 가기</button>
         </div>
       </section>
     </main>
@@ -347,6 +388,17 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -10,6 +10,7 @@
   "archive-screen",
   "archive-month-screen",
   "archive-playlist-detail-screen",
+  "playlist-player-screen",
   "record-page-screen",
   "capture-screen",
   "note-screen",
@@ -30,6 +31,8 @@ let activeArchivePlaylistIndex = 0;
 let pendingNote = "";
 let completeTimer = null;
 let playlistTimer = null;
+let hasTodayPlaylist = false;
+let playerEntryMode = "archive";
 
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
@@ -56,11 +59,21 @@ const archiveMonthPlaylistDesc = document.getElementById("archive-month-playlist
 const archiveDetailTitle = document.getElementById("archive-detail-title");
 const archiveDetailDate = document.getElementById("archive-detail-date");
 const archiveDetailName = document.getElementById("archive-detail-name");
+const trackLogModal = document.getElementById("track-log-modal");
+const trackLogDate = document.getElementById("track-log-date");
+const trackLogPhoto = document.getElementById("track-log-photo");
+const trackLogCaption = document.getElementById("track-log-caption");
+const playerNavButton = document.querySelector(".player-nav-button");
+const playerDate = document.getElementById("player-date");
+const playerTitle = document.getElementById("player-title");
+const playerLogPhoto = document.getElementById("player-log-photo");
+const playerLogCaption = document.getElementById("player-log-caption");
 let cameraStream = null;
 let cameraFacingMode = "environment";
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
 let staffNoteCount = 0;
+let selectedMoodNotes = [];
 
 
 
@@ -73,6 +86,17 @@ function formatToday() {
   }).formatToParts(new Date());
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}.${values.month}.${values.day}`;
+}
+
+function formatCurrentTime() {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
 }
 
 function updateRecordDates() {
@@ -283,13 +307,97 @@ function renderArchiveMonthView(month = activeArchiveMonth) {
   });
 }
 
-function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
+function getActiveArchivePlaylist() {
   const playlists = archivePlaylists[activeArchiveMonth - 1] || [];
-  const playlist = playlists[index] || playlists[0] || createArchivePlaylist();
+  return playlists[activeArchivePlaylistIndex] || playlists[0] || createArchivePlaylist();
+}
+
+function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
   activeArchivePlaylistIndex = index;
+  const playlist = getActiveArchivePlaylist();
   if (archiveDetailTitle) archiveDetailTitle.textContent = formatArchiveMonth(activeArchiveMonth);
   if (archiveDetailDate) archiveDetailDate.textContent = playlist.date;
   if (archiveDetailName) archiveDetailName.textContent = playlist.title;
+}
+
+function renderPlaylistPlayer() {
+  const isHomeEntry = playerEntryMode === "home";
+  if (playerNavButton) {
+    playerNavButton.classList.toggle("home-mode", isHomeEntry);
+    playerNavButton.textContent = isHomeEntry ? "" : "←";
+    playerNavButton.setAttribute("aria-label", isHomeEntry ? "홈으로 돌아가기" : "뒤로");
+  }
+  const playlist = getActiveArchivePlaylist();
+  const firstLog = getTrackLog(0);
+  if (playerDate) playerDate.textContent = playlist.date;
+  if (playerTitle) playerTitle.textContent = playlist.title;
+  if (playerLogCaption) playerLogCaption.textContent = firstLog.caption || "오늘 하루를 기록했어요";
+  if (playerLogPhoto) {
+    playerLogPhoto.replaceChildren();
+    playerLogPhoto.classList.toggle("has-photo", Boolean(firstLog.photo));
+    if (firstLog.photo) {
+      const image = document.createElement("img");
+      image.src = firstLog.photo;
+      image.alt = "대표 로그 사진";
+      playerLogPhoto.append(image);
+    }
+  }
+}
+
+function getTrackLog(index) {
+  return logs[index] || {
+    caption: "아직 이 노래와 연결된 로그가 없어요",
+    photo: "",
+    date: formatToday(),
+    time: "16:00",
+  };
+}
+
+function renderTrackLogStaff(notes = []) {
+  const staff = document.querySelector(".track-log-staff");
+  if (!staff) return;
+  staff.querySelectorAll(".note").forEach((note) => note.remove());
+  const fallbackNotes = [
+    "./assets/music-note-orange.png",
+    "./assets/music-note-yellow.png",
+    "./assets/music-note-orange.png",
+    "./assets/music-note-yellow.png",
+  ];
+  const noteSources = notes.length ? notes : fallbackNotes;
+  noteSources.slice(0, 8).forEach((src, index) => {
+    const note = document.createElement("img");
+    note.className = `note note-${index + 1}`;
+    note.src = src;
+    note.alt = "";
+    staff.append(note);
+  });
+}
+
+function openTrackLog(index) {
+  const log = getTrackLog(index);
+  if (trackLogDate) trackLogDate.textContent = `${log.date || formatToday()} ${log.time || "16:00"}`;
+  if (trackLogCaption) trackLogCaption.textContent = log.caption || "오늘 감정과 상황을 기록했어요";
+  renderTrackLogStaff(log.moodNotes || []);
+  if (trackLogPhoto) {
+    trackLogPhoto.replaceChildren();
+    trackLogPhoto.classList.toggle("has-photo", Boolean(log.photo));
+    if (log.photo) {
+      const image = document.createElement("img");
+      image.src = log.photo;
+      image.alt = "연결된 로그 사진";
+      trackLogPhoto.append(image);
+    }
+  }
+  const isPlayerScreen = screens[currentIndex] === "playlist-player-screen";
+  trackLogModal?.classList.toggle("player-log-modal", isPlayerScreen);
+  document.querySelector(".app-shell")?.append(trackLogModal);
+  trackLogModal?.removeAttribute("hidden");
+  trackLogModal?.classList.add("open");
+}
+
+function closeTrackLog() {
+  trackLogModal?.classList.remove("open", "player-log-modal");
+  trackLogModal?.setAttribute("hidden", "");
 }
 function scrollArchiveToCurrentMonth() {
   const archiveScroll = document.querySelector(".archive-scroll");
@@ -347,6 +455,9 @@ function showScreen(index) {
   if (currentScreen === "archive-playlist-detail-screen") {
     renderArchivePlaylistDetail(activeArchivePlaylistIndex);
   }
+  if (currentScreen === "playlist-player-screen") {
+    renderPlaylistPlayer();
+  }
   if (currentScreen === "record-page-screen") {
     renderPolaroids();
   }
@@ -403,13 +514,15 @@ function addEmotionStaffNote(button) {
     { left: 362, top: 43 },
   ];
   const position = positions[staffNoteCount % positions.length];
+  const noteSrc = source.getAttribute("src") || source.src;
   const note = document.createElement("img");
   note.className = "staff-note dynamic-staff-note";
-  note.src = source.src;
+  note.src = noteSrc;
   note.alt = "";
   note.style.left = `${position.left}px`;
   note.style.top = `${position.top}px`;
   emotionStaff.append(note);
+  selectedMoodNotes.push(noteSrc);
   staffNoteCount += 1;
 }
 function selectEmotion(button) {
@@ -478,6 +591,11 @@ function makePolaroid({ index, add = false, log = null }) {
   return card;
 }
 
+function updateTodayPlaylistButton() {
+  if (!playlistButton) return;
+  playlistButton.textContent = hasTodayPlaylist ? "오늘의 플리 들으러 가기" : "플레이리스트 만들기";
+}
+
 function renderPolaroids() {
   polaroidList.replaceChildren();
   const board = document.createElement("div");
@@ -498,6 +616,7 @@ function renderPolaroids() {
   polaroidList.classList.toggle("scrollable", logs.length >= 4);
   polaroidList.appendChild(board);
   playlistButton.classList.add("visible");
+  updateTodayPlaylistButton();
 }
 
 recordNoteInput?.addEventListener("keydown", (event) => {
@@ -545,6 +664,22 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "open-playlist-player") {
+    playerEntryMode = target.dataset.playerEntry || "archive";
+    showScreen(screens.indexOf("playlist-player-screen"));
+    return;
+  }
+
+  if (action === "open-track-log") {
+    openTrackLog(Number(target.dataset.trackIndex || 0));
+    return;
+  }
+
+  if (action === "close-track-log") {
+    closeTrackLog();
+    return;
+  }
+
   if (action === "add-log") {
     showScreen(screens.indexOf("capture-screen"));
     return;
@@ -572,6 +707,9 @@ document.addEventListener("click", (event) => {
     logs.push({
       caption: pendingNote,
       photo: capturedPhotoDataUrl,
+      date: formatToday(),
+      time: formatCurrentTime(),
+      moodNotes: [...selectedMoodNotes],
     });
     logCount = logs.length;
     pendingNote = "";
@@ -583,6 +721,8 @@ document.addEventListener("click", (event) => {
 
   if (action === "complete-playlist") {
     addPlaylistToArchive();
+    hasTodayPlaylist = true;
+    updateTodayPlaylistButton();
     showScreen(screens.indexOf("playlist-complete-screen"));
     return;
   }
@@ -593,7 +733,17 @@ document.addEventListener("click", (event) => {
   }
 
   if (target.id === "playlist-button") {
-    showScreen(screens.indexOf("playlist-loading-screen"));
+    if (hasTodayPlaylist) {
+      playerEntryMode = "home";
+      showScreen(screens.indexOf("playlist-player-screen"));
+    } else {
+      showScreen(screens.indexOf("playlist-loading-screen"));
+    }
+    return;
+  }
+
+  if (action === "player-nav") {
+    showScreen(screens.indexOf(playerEntryMode === "home" ? "record-home-screen" : "archive-playlist-detail-screen"));
     return;
   }
 
@@ -615,6 +765,18 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
