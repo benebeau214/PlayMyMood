@@ -1,3 +1,7 @@
 .env
 __pycache__/
 *.pyc
+.DS_Store
+.pytest_cache/
+generated_covers/
+generated_stickers*/
