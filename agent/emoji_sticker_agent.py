@@ -384,13 +384,45 @@ def make_white_background_transparent(
     path = Path(image_path).expanduser().resolve()
     with Image.open(path) as source:
         image = source.convert("RGBA")
-    converted: list[tuple[int, int, int, int]] = []
-    pixels = (
+    width, height = image.size
+    pixels = list(
         image.get_flattened_data()
         if hasattr(image, "get_flattened_data")
         else image.getdata()
     )
-    for red, green, blue, _alpha in pixels:
+
+    pending = [
+        index
+        for row in range(height)
+        for index in (row * width, row * width + width - 1)
+    ]
+    pending.extend(range(width))
+    pending.extend(range((height - 1) * width, height * width))
+
+    background: set[int] = set()
+    while pending:
+        index = pending.pop()
+        if index in background:
+            continue
+        red, green, blue, _alpha = pixels[index]
+        if min(red, green, blue) <= fade_start:
+            continue
+        background.add(index)
+
+        x = index % width
+        y = index // width
+        for neighbor_y in range(max(0, y - 1), min(height, y + 2)):
+            row_start = neighbor_y * width
+            for neighbor_x in range(max(0, x - 1), min(width, x + 2)):
+                neighbor = row_start + neighbor_x
+                if neighbor not in background:
+                    pending.append(neighbor)
+
+    converted: list[tuple[int, int, int, int]] = []
+    for index, (red, green, blue, _alpha) in enumerate(pixels):
+        if index not in background:
+            converted.append((red, green, blue, 255))
+            continue
         darkest_channel = min(red, green, blue)
         if darkest_channel >= transparent_at:
             alpha = 0
