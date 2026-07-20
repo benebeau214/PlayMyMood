@@ -1,0 +1,36 @@
+{
+  "logs": [
+    {
+      "id": "rainy_commute",
+      "text": "퇴근길에 갑자기 비가 쏟아졌다. 우산을 쓰고 천천히 걸으니 빗소리 덕분에 복잡했던 마음이 차분해졌다.",
+      "emotions": {
+        "calm": 0.78,
+        "tired": 0.42
+      }
+    },
+    {
+      "id": "overslept",
+      "text": "알람을 듣지 못하고 늦잠을 잤다. 시계를 확인한 순간 지각할 것 같아 심장이 철렁하고 몹시 당황했다.",
+      "emotions": {
+        "panic": 0.92,
+        "embarrassment": 0.7
+      }
+    },
+    {
+      "id": "surprise_birthday",
+      "text": "친구들이 몰래 준비한 생일 케이크를 꺼내며 축하해줬다. 예상하지 못한 다정함에 크게 기쁘고 감동했다.",
+      "emotions": {
+        "joy": 0.94,
+        "gratitude": 0.88
+      }
+    },
+    {
+      "id": "late_overtime",
+      "text": "새벽까지 야근한 뒤 노트북을 겨우 닫았다. 집중력이 바닥나고 눈도 제대로 뜨기 어려울 만큼 완전히 지쳤다.",
+      "emotions": {
+        "exhaustion": 0.97,
+        "numbness": 0.73
+      }
+    }
+  ]
+}
