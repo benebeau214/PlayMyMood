@@ -1,0 +1,15 @@
+{
+  "name": "playmymood-backend",
+  "private": true,
+  "version": "0.1.0",
+  "devDependencies": {
+    "supabase": "2.109.1"
+  },
+  "scripts": {
+    "supabase": "supabase",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "db:push:dry": "supabase db push --dry-run",
+    "db:diff": "supabase db diff"
+  }
+}
