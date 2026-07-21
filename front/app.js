@@ -88,6 +88,49 @@ let capturedPhotoDataUrl = "";
 let staffNoteCount = 0;
 let selectedMoodNotes = [];
 
+// --- Supabase / Spotify 로그인 ---
+const PMM = window.PMM_CONFIG || {};
+const supabaseConfigured =
+  Boolean(window.supabase) &&
+  Boolean(PMM.SUPABASE_URL) &&
+  Boolean(PMM.SUPABASE_ANON_KEY) &&
+  !PMM.SUPABASE_ANON_KEY.startsWith("PASTE_");
+const sb = supabaseConfigured
+  ? window.supabase.createClient(PMM.SUPABASE_URL, PMM.SUPABASE_ANON_KEY)
+  : null;
+
+async function loginWithSpotify() {
+  // Supabase 미설정(예: anon key 미입력) 시엔 프로토타입처럼 화면만 넘긴다.
+  if (!sb) {
+    console.warn("Supabase 미설정: 프로토타입 모드로 다음 화면으로 넘어갑니다. config.js에 anon key를 넣으세요.");
+    showScreen(currentIndex + 1);
+    return;
+  }
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: "spotify",
+    options: {
+      scopes: PMM.SPOTIFY_SCOPES,
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+  if (error) {
+    console.error("Spotify 로그인 실패:", error.message);
+    alert("Spotify 로그인에 실패했어요: " + error.message);
+  }
+  // 성공 시 브라우저가 Spotify로 리다이렉트되고, 돌아오면 initAuth()가 세션을 감지한다.
+}
+
+async function initAuth() {
+  if (!sb) return;
+  // OAuth 리다이렉트로 돌아오면 supabase-js가 URL에서 세션을 자동 복원한다(detectSessionInUrl 기본값).
+  const { data } = await sb.auth.getSession();
+  if (data.session) {
+    // TODO: onboarding_completed_at / user_preferences로 온보딩 완료 여부를 확인해
+    //       완료된 유저는 record-home으로 보내기. 지금은 온보딩 시작 화면으로.
+    showScreen(screens.indexOf("name-screen"));
+  }
+}
+
 
 
 function formatToday() {
@@ -649,7 +692,12 @@ document.addEventListener("click", (event) => {
   if (!target) return;
   const action = target.dataset.action;
 
-  if (action === "spotify-login" || action === "next") {
+  if (action === "spotify-login") {
+    loginWithSpotify();
+    return;
+  }
+
+  if (action === "next") {
     showScreen(currentIndex + 1);
     return;
   }
@@ -783,6 +831,7 @@ document.addEventListener("click", (event) => {
 });
 
 renderPolaroids();
+initAuth();
 
 
 
