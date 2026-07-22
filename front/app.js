@@ -46,6 +46,7 @@ let completeTimer = null;
 let playlistTimer = null;
 let hasTodayPlaylist = false;
 let playerEntryMode = "archive";
+let isPlayerPlaying = false;
 
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
@@ -57,6 +58,7 @@ const cameraCanvas = document.getElementById("camera-canvas");
 const cameraPreview = document.querySelector(".camera-preview");
 const cameraFlashOverlay = document.querySelector(".camera-flash-overlay");
 const zoomSlider = document.getElementById("zoom-slider");
+const zoomControl = document.querySelector(".zoom-control");
 const zoomLabels = document.querySelectorAll(".zoom-labels span");
 const notePhoto = document.querySelector(".note-photo");
 const flashButton = document.querySelector(".flash-button");
@@ -81,10 +83,13 @@ const playerDate = document.getElementById("player-date");
 const playerTitle = document.getElementById("player-title");
 const playerLogPhoto = document.getElementById("player-log-photo");
 const playerLogCaption = document.getElementById("player-log-caption");
+const playerRecordBoard = document.querySelector(".player-record-board");
+const playerPlayButton = document.querySelector(".player-play");
 let cameraStream = null;
 let cameraFacingMode = "environment";
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
+const MAX_EMOTION_SELECTIONS = 9;
 let staffNoteCount = 0;
 let selectedMoodNotes = [];
 
@@ -162,13 +167,37 @@ function updateRecordDates() {
   }
 }
 
+function getNearestZoomLabel(value) {
+  let nearest = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const label of zoomLabels) {
+    const distance = Math.abs(Number(label.dataset.zoom) - value);
+    if (distance < nearestDistance) {
+      nearest = label;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
 function applyZoom() {
   if (!zoomSlider) return;
   const zoom = Number(zoomSlider.value || 1);
   if (cameraVideo) cameraVideo.style.transform = `scale(${zoom})`;
+  const activeLabel = getNearestZoomLabel(zoom);
   for (const label of zoomLabels) {
-    label.classList.toggle("active", Number(label.dataset.zoom) === zoom);
+    label.classList.toggle("active", label === activeLabel);
   }
+}
+
+function snapZoomToClosestLabel(clientX) {
+  if (!zoomSlider || !zoomControl || !zoomLabels.length) return;
+  const rect = zoomControl.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  const index = Math.round(ratio * (zoomLabels.length - 1));
+  const label = zoomLabels[index];
+  zoomSlider.value = label.dataset.zoom;
+  applyZoom();
 }
 
 function stopCamera() {
@@ -376,6 +405,13 @@ function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
   if (archiveDetailName) archiveDetailName.textContent = playlist.title;
 }
 
+
+function setPlayerPlaying(isPlaying) {
+  isPlayerPlaying = isPlaying;
+  playerRecordBoard?.classList.toggle("is-playing", isPlayerPlaying);
+  playerPlayButton?.classList.toggle("is-playing", isPlayerPlaying);
+  playerPlayButton?.setAttribute("aria-label", isPlayerPlaying ? "일시정지" : "재생");
+}
 function renderPlaylistPlayer() {
   const isHomeEntry = playerEntryMode === "home";
   if (playerNavButton) {
@@ -420,11 +456,14 @@ function renderTrackLogStaff(notes = []) {
     "./assets/music-note-yellow.png",
   ];
   const noteSources = notes.length ? notes : fallbackNotes;
-  noteSources.slice(0, 8).forEach((src, index) => {
+  noteSources.slice(0, MAX_EMOTION_SELECTIONS).forEach((src, index) => {
+    const position = getEmotionStaffPosition(index);
     const note = document.createElement("img");
     note.className = `note note-${index + 1}`;
     note.src = src;
     note.alt = "";
+    note.style.left = `${position.left}px`;
+    note.style.top = `${position.top}px`;
     staff.append(note);
   });
 }
@@ -549,46 +588,62 @@ function selectCard(card) {
 }
 
 
+function getEmotionStaffPosition(index) {
+  const positions = [
+    { left: -6, top: -8 },
+    { left: 34, top: 30 },
+    { left: 74, top: 8 },
+    { left: 114, top: 42 },
+    { left: 154, top: 20 },
+    { left: 194, top: -7 },
+    { left: 234, top: 31 },
+    { left: 274, top: 10 },
+    { left: 314, top: 41 },
+  ];
+  return positions[index] || positions[positions.length - 1];
+}
+
+function renderEmotionStaff(noteSources = selectedMoodNotes) {
+  if (!emotionStaff) return;
+  emotionStaff.querySelectorAll(".staff-note").forEach((note) => note.remove());
+  noteSources.slice(0, MAX_EMOTION_SELECTIONS).forEach((noteSrc, index) => {
+    const position = getEmotionStaffPosition(index);
+    const note = document.createElement("img");
+    note.className = `staff-note dynamic-staff-note note-${index + 1}`;
+    note.src = noteSrc;
+    note.alt = "";
+    note.style.left = `${position.left}px`;
+    note.style.top = `${position.top}px`;
+    emotionStaff.append(note);
+  });
+  staffNoteCount = noteSources.length;
+}
+
 function resetEmotionStaff() {
   staffNoteCount = 0;
+  selectedMoodNotes = [];
   emotionStaff?.querySelectorAll(".staff-note").forEach((note) => note.remove());
-}
-
-function addEmotionStaffNote(button) {
-  if (!emotionStaff) return;
-  const source = button.querySelector("img");
-  if (!source) return;
-
-  const positions = [
-    { left: 4, top: -8 },
-    { left: 73, top: 31 },
-    { left: 139, top: 15 },
-    { left: 203, top: 43 },
-    { left: 273, top: -8 },
-    { left: 325, top: 30 },
-    { left: 349, top: 12 },
-    { left: 362, top: 43 },
-  ];
-  const position = positions[staffNoteCount % positions.length];
-  const noteSrc = source.getAttribute("src") || source.src;
-  const note = document.createElement("img");
-  note.className = "staff-note dynamic-staff-note";
-  note.src = noteSrc;
-  note.alt = "";
-  note.style.left = `${position.left}px`;
-  note.style.top = `${position.top}px`;
-  emotionStaff.append(note);
-  selectedMoodNotes.push(noteSrc);
-  staffNoteCount += 1;
-}
-function selectEmotion(button) {
   for (const item of document.querySelectorAll(".emotion-choice")) {
     item.classList.remove("selected");
     item.setAttribute("aria-selected", "false");
   }
-  button.classList.add("selected");
-  button.setAttribute("aria-selected", "true");
-  addEmotionStaffNote(button);
+}
+
+function updateSelectedMoodNotes() {
+  selectedMoodNotes = [...document.querySelectorAll(".emotion-choice.selected img")]
+    .map((source) => source.getAttribute("src") || source.src)
+    .slice(0, MAX_EMOTION_SELECTIONS);
+  renderEmotionStaff(selectedMoodNotes);
+}
+
+function selectEmotion(button) {
+  const isSelected = button.classList.contains("selected");
+  const selectedCount = document.querySelectorAll(".emotion-choice.selected").length;
+  if (!isSelected && selectedCount >= MAX_EMOTION_SELECTIONS) return;
+
+  button.classList.toggle("selected", !isSelected);
+  button.setAttribute("aria-selected", String(!isSelected));
+  updateSelectedMoodNotes();
 }
 
 function polaroidPosition(index) {
@@ -657,8 +712,7 @@ function renderPolaroids() {
   const board = document.createElement("div");
   board.className = "polaroid-board";
 
-  const minimumSlotsBeforeAdd = 3;
-  const displayCount = Math.max(minimumSlotsBeforeAdd, logs.length);
+  const displayCount = Math.max(1, logs.length);
   const addIndex = displayCount;
   const totalCards = addIndex + 1;
 
@@ -684,6 +738,8 @@ recordNoteInput?.addEventListener("keydown", (event) => {
 
 hitSlider?.addEventListener("input", updateHitSlider);
 zoomSlider?.addEventListener("input", applyZoom);
+zoomControl?.addEventListener("click", (event) => snapZoomToClosestLabel(event.clientX));
+if (zoomSlider) zoomSlider.value = "1";
 updateHitSlider();
 updateRecordDates();
 applyZoom();
@@ -808,7 +864,13 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "toggle-player-play") {
+    setPlayerPlaying(!isPlayerPlaying);
+    return;
+  }
+
   if (action === "player-nav") {
+    setPlayerPlaying(false);
     showScreen(screens.indexOf(playerEntryMode === "home" ? "record-home-screen" : "archive-playlist-detail-screen"));
     return;
   }
@@ -837,6 +899,15 @@ document.addEventListener("click", (event) => {
 
 renderPolaroids();
 initAuth();
+
+
+
+
+
+
+
+
+
 
 
 

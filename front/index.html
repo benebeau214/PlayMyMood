@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Play My Mood</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260722-tonearm-overlap" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
@@ -206,8 +206,10 @@
         <button class="player-nav-button player-back-button" type="button" data-action="player-nav" aria-label="뒤로">←</button>
         <p class="player-date" id="player-date">2026.06.11</p>
         <div class="player-hero" aria-label="플레이리스트 커버">
-          <div class="player-record-board">
-            <img src="./assets/record-player-straight.png" alt="" />
+          <div class="player-record-board" aria-hidden="true">
+            <span class="player-board-base"></span>
+            <img class="player-record-disc" src="./assets/camera-shutter-record.png" alt="" />
+            <span class="player-tonearm"></span>
           </div>
           <article class="player-log-polaroid" aria-label="대표 기록">
             <div class="player-log-photo" id="player-log-photo"></div>
@@ -224,7 +226,7 @@
         </section>
         <div class="player-controls" aria-label="재생 컨트롤">
           <button type="button" aria-label="이전 곡">◀◀</button>
-          <button class="player-play" type="button" aria-label="재생">▶</button>
+          <button class="player-play" type="button" data-action="toggle-player-play" aria-label="재생">▶</button>
           <button type="button" aria-label="다음 곡">▶▶</button>
         </div>
       </section>
@@ -252,7 +254,7 @@
           <div class="camera-flash-overlay" aria-hidden="true"></div>
         </div>
         <div class="zoom-control" aria-label="카메라 배율 조절">
-          <input id="zoom-slider" class="zoom-slider" type="range" min="0.5" max="5" step="0.5" value="2" aria-label="카메라 배율" />
+          <input id="zoom-slider" class="zoom-slider" type="range" min="0.5" max="5" step="0.5" value="1" aria-label="카메라 배율" />
           <div class="zoom-labels" aria-hidden="true">
             <span data-zoom="0.5">0.5</span>
             <span data-zoom="1">1</span>
@@ -304,7 +306,7 @@
 
         <section class="emotion-panel" aria-label="감정 고르기">
           <h1>지금의 감정은 어떠신가요?</h1>
-          <div class="emotion-choice-grid" role="listbox" aria-label="감정 선택">
+          <div class="emotion-choice-grid" role="listbox" aria-multiselectable="true" aria-label="감정 선택">
             <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
             <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
             <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
@@ -384,9 +386,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./config.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260722-player-spin"></script>
   </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
