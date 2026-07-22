@@ -34,13 +34,15 @@
 
 * { box-sizing: border-box; }
 
+html {
+  overflow: hidden;
+}
+
 body {
   width: 100vw;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0;
-  display: grid;
-  place-items: center;
   background: #9a9a9a;
   overflow: hidden;
 }
@@ -48,13 +50,15 @@ body {
 button, input { font: inherit; }
 
 .app-shell {
-  position: relative;
+  position: fixed;
+  top: 50%;
+  left: 50%;
   width: 393px;
   height: 852px;
   min-height: 0;
   background: var(--app-bg);
   overflow: hidden;
-  transform: scale(var(--app-scale));
+  transform: translate(-50%, -50%) scale(var(--app-scale));
   transform-origin: center center;
 }
 
@@ -2505,14 +2509,15 @@ h1 {
   object-fit: contain;
 }
 
-.track-log-staff .note-1 { left: -10px; top: -5px; }
-.track-log-staff .note-2 { left: 68px; top: 7px; }
-.track-log-staff .note-3 { left: 124px; top: 12px; }
-.track-log-staff .note-4 { left: 191px; top: 32px; }
-.track-log-staff .note-5 { left: 246px; top: -4px; }
-.track-log-staff .note-6 { right: -8px; top: 15px; }
-.track-log-staff .note-7 { left: 20px; top: 31px; }
-.track-log-staff .note-8 { right: 28px; top: 35px; }
+.track-log-staff .note-1 { left: -6px; top: -8px; }
+.track-log-staff .note-2 { left: 34px; top: 30px; }
+.track-log-staff .note-3 { left: 74px; top: 8px; }
+.track-log-staff .note-4 { left: 114px; top: 42px; }
+.track-log-staff .note-5 { left: 154px; top: 20px; }
+.track-log-staff .note-6 { left: 194px; top: -7px; }
+.track-log-staff .note-7 { left: 234px; top: 31px; }
+.track-log-staff .note-8 { left: 274px; top: 10px; }
+.track-log-staff .note-9 { left: 314px; top: 41px; }
 .playlist-player-screen {
   background: var(--app-bg);
   overflow: hidden;
@@ -3357,5 +3362,221 @@ h1 {
   width: 62px;
   height: 74px;
   object-fit: contain;
+}
+
+
+
+
+/* Give album thumbnails and song text breathing room on today's playlist screen */
+.playlist-list .track-row > span:nth-of-type(2) {
+  margin-left: 24px;
+}
+
+/* Match player track spacing with today's playlist creation screen */
+.playlist-player-screen .player-track {
+  grid-template-columns: 52px 1fr;
+  gap: 24px;
+}
+
+/* Larger touch target for track log modal close button */
+.track-log-close {
+  right: 10px;
+  top: 16px;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+
+/* Draw modal close icon from the same centered hit box */
+.track-log-close {
+  right: 10px;
+  top: 16px;
+  width: 56px;
+  height: 56px;
+  display: block;
+  overflow: hidden;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.track-log-close::before,
+.track-log-close::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 25px;
+  height: 4px;
+  border-radius: 999px;
+  background: #000;
+  transform-origin: center;
+}
+
+.track-log-close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.track-log-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Keep the close button above the full-width modal date text */
+.track-log-close {
+  z-index: 20;
+}
+
+.track-log-date {
+  pointer-events: none;
+}
+
+/* Playlist player: layered record so only the LP spins while playing */
+.playlist-player-screen .player-record-board {
+  background: transparent;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.playlist-player-screen .player-board-base {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border: 4px solid #f7d4a1;
+  border-radius: 5px;
+  background: #d39b70;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.18);
+}
+
+.playlist-player-screen .player-record-board .player-record-disc {
+  position: absolute;
+  left: 27px;
+  top: 18px;
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+  transform-origin: 50% 50%;
+  z-index: 2;
+}
+
+.playlist-player-screen .player-record-board.is-playing .player-record-disc {
+  animation: player-lp-spin 1.1s linear infinite;
+}
+
+.playlist-player-screen .player-tonearm {
+  position: absolute;
+  right: -2px;
+  top: 35px;
+  width: 96px;
+  height: 118px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.playlist-player-screen .player-tonearm::before {
+  content: "";
+  position: absolute;
+  right: 22px;
+  top: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #565256 0 38%, #34313a 39% 70%, #241c26 71% 100%);
+}
+
+.playlist-player-screen .player-tonearm::after {
+  content: "";
+  position: absolute;
+  right: 45px;
+  top: 42px;
+  width: 92px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f7f7f7;
+  transform: rotate(108deg);
+  transform-origin: right center;
+  box-shadow: -58px 1px 0 -2px #29292d;
+}
+
+.playlist-player-screen .player-play.is-playing {
+  font-size: 0;
+  text-indent: 0;
+}
+
+.playlist-player-screen .player-play.is-playing::before {
+  content: "Ⅱ";
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+@keyframes player-lp-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Use the exported player board and tonearm assets; keep only the LP as the spinning layer */
+.playlist-player-screen .player-board-base {
+  border: 0;
+  border-radius: 5px;
+  background: url("./assets/player-board-base.png") center / 100% 100% no-repeat;
+}
+
+.playlist-player-screen .player-tonearm {
+  right: -14px;
+  top: 27px;
+  width: 116px;
+  height: 124px;
+  background: url("./assets/player-tonearm.png") center / contain no-repeat;
+}
+
+.playlist-player-screen .player-tonearm::before,
+.playlist-player-screen .player-tonearm::after {
+  content: none;
+}
+
+/* Keep the playlist player LP crisp and let the tonearm sit over the disc */
+.playlist-player-screen .player-record-board {
+  left: 104px;
+  top: -4px;
+  width: 318px;
+  height: 208px;
+}
+
+.playlist-player-screen .player-record-board .player-record-disc {
+  left: 24px;
+  top: 16px;
+  width: 176px;
+  height: 176px;
+  z-index: 2;
+}
+
+.playlist-player-screen .player-tonearm {
+  right: -26px;
+  top: 36px;
+  width: 134px;
+  height: 122px;
+  z-index: 5;
+}
+
+/* Pull the playlist player tonearm onto the LP disc */
+.playlist-player-screen .player-tonearm {
+  right: 18px;
+  top: 31px;
+  width: 132px;
+  height: 124px;
+  z-index: 6;
+}
+
+/* Match the reference: tonearm cartridge rests on the LP */
+.playlist-player-screen .player-tonearm {
+  left: 155px;
+  right: auto;
+  top: 20px;
+  width: 156px;
+  height: 150px;
+  z-index: 7;
+  background-size: contain;
 }
 
