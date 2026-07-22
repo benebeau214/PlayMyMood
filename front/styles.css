@@ -3120,3 +3120,242 @@ h1 {
 .top-area .progress {
   margin-top: 46px;
 }
+/* Final onboarding welcome screen replacing cover-style selection */
+.onboarding-welcome-screen {
+  position: relative;
+  text-align: center;
+  background: var(--app-bg);
+}
+
+.onboarding-welcome-screen.active {
+  display: block;
+}
+
+.welcome-greeting {
+  position: absolute;
+  top: 229px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.onboarding-welcome-screen h1 {
+  position: absolute;
+  top: 483px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 1.28rem;
+  line-height: 1.28;
+  font-weight: 700;
+}
+
+.welcome-start-button {
+  bottom: 50px;
+}
+/* Frame 21 onboarding welcome layout */
+.onboarding-welcome-screen .welcome-top-area .back-button {
+  position: absolute;
+  left: 31px;
+  top: 55px;
+}
+
+.onboarding-welcome-screen .welcome-top-area .progress {
+  width: 340px;
+  margin-top: 46px;
+  transform: translateX(19px);
+}
+
+.onboarding-welcome-screen .welcome-greeting {
+  top: 218px;
+  left: 43px;
+  right: auto;
+  font-size: 1.06rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.welcome-visual {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 294px;
+  height: 257px;
+}
+
+.welcome-note {
+  position: absolute;
+  object-fit: contain;
+}
+
+.welcome-note-yellow {
+  left: 80px;
+  top: 0;
+  width: 44px;
+}
+
+.welcome-note-orange {
+  right: 45px;
+  top: 50px;
+  width: 48px;
+}
+
+.welcome-player {
+  position: absolute;
+  left: 96px;
+  top: 91px;
+  width: 220px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.2));
+}
+
+.onboarding-welcome-screen h1 {
+  top: 583px;
+  font-size: 1.26rem;
+  line-height: 1.22;
+  font-weight: 700;
+}
+
+.welcome-start-button {
+  bottom: 53px;
+}
+/* Use compact record-player asset on welcome screen */
+.welcome-visual {
+  top: 290px;
+}
+
+.welcome-player {
+  left: 96px;
+  top: 104px;
+  width: 220px;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.2));
+}
+
+.welcome-note-yellow {
+  left: 82px;
+  top: 8px;
+  width: 42px;
+}
+
+.welcome-note-orange {
+  right: 47px;
+  top: 62px;
+  width: 46px;
+}
+
+.onboarding-welcome-screen h1 {
+  top: 584px;
+  z-index: 2;
+}
+/* Fix welcome start button and orange note placement */
+.onboarding-welcome-screen .welcome-start-button {
+  top: auto;
+  bottom: 53px;
+  z-index: 10;
+}
+
+.onboarding-welcome-screen .welcome-note-orange {
+  top: 28px;
+}
+/* Hard-pin welcome start button to bottom of the 393x852 design canvas */
+.onboarding-welcome-screen .welcome-start-button.next-button {
+  position: absolute !important;
+  left: 35px !important;
+  right: 24px !important;
+  top: 748px !important;
+  bottom: auto !important;
+  height: 51px;
+  z-index: 30;
+}
+
+.onboarding-welcome-screen .welcome-note-orange {
+  top: 12px;
+}
+/* Match welcome progress and start button with other onboarding steps */
+.onboarding-welcome-screen .welcome-top-area .progress {
+  width: 320px;
+  margin: 46px auto 0;
+  transform: none;
+}
+
+.onboarding-welcome-screen .welcome-start-button.next-button {
+  left: 19px !important;
+  right: 18px !important;
+  top: 754px !important;
+  bottom: auto !important;
+  height: 51px;
+}
+/* Welcome screen visual refinement */
+.onboarding-welcome-screen .welcome-greeting {
+  font-size: 1.22rem;
+}
+
+.onboarding-welcome-screen .welcome-note-yellow {
+  left: 66px;
+}
+
+.onboarding-welcome-screen .welcome-note-orange {
+  right: 61px;
+}
+
+.onboarding-welcome-screen .welcome-player {
+  left: 82px;
+}
+/* Hiphop genre sunglasses asset */
+.genre-hiphop img {
+  width: 76px;
+  height: 36px;
+  object-fit: contain;
+}
+/* KPOP genre lightstick asset */
+.genre-kpop img {
+  width: 62px;
+  height: 74px;
+  object-fit: contain;
+}
+/* Ballad genre piano asset */
+.genre-ballad img {
+  width: 82px;
+  height: 58px;
+  object-fit: contain;
+}
+/* R&B genre vocal asset */
+.genre-rnb img {
+  width: 70px;
+  height: 66px;
+  object-fit: contain;
+}
+/* Jazz genre sax asset */
+.genre-jazz img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+/* EDM genre DJ asset */
+.genre-edm img {
+  width: 86px;
+  height: 54px;
+  object-fit: contain;
+}
+/* Trot genre jacket asset */
+.genre-trot img {
+  width: 76px;
+  height: 68px;
+  object-fit: contain;
+}
+/* Rock genre guitar asset */
+.genre-rock img {
+  width: 68px;
+  height: 76px;
+  object-fit: contain;
+}
+/* POP genre microphone asset */
+.genre-pop img {
+  width: 62px;
+  height: 74px;
+  object-fit: contain;
+}
+
