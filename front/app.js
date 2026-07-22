@@ -702,6 +702,11 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "start-onboarding") {
+    showScreen(screens.indexOf("record-home-screen"));
+    return;
+  }
+
   if (action === "open-records") {
     showScreen(screens.indexOf("record-page-screen"));
     return;
@@ -832,6 +837,7 @@ document.addEventListener("click", (event) => {
 
 renderPolaroids();
 initAuth();
+
 
 
 
