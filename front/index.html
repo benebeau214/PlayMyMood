@@ -124,6 +124,7 @@
       </section>
 
       <section class="screen record-home-screen" id="record-home-screen" aria-label="기록 시작">
+        <button class="logout-button" type="button" data-action="logout">로그아웃</button>
         <div class="desk-scene" aria-hidden="true">
           <div class="wall-band"></div>
           <img class="scene-plant" src="./assets/desk-plant.png" alt="" />
@@ -144,26 +145,26 @@
         <header class="archive-header">
           <button class="playlist-home-button archive-home-button" type="button" data-action="go-record-home" aria-label="홈으로 돌아가기"></button>
           <div class="archive-year-control" aria-label="연도 선택">
-            <button type="button" aria-label="이전 연도">&lt;</button>
-            <span>2026</span>
-            <button type="button" aria-label="다음 연도">&gt;</button>
+            <button type="button" data-action="prev-archive-year" aria-label="이전 연도">&lt;</button>
+            <span id="archive-year-label">2026</span>
+            <button type="button" data-action="next-archive-year" aria-label="다음 연도">&gt;</button>
           </div>
         </header>
         <div class="archive-scroll">
           <img class="archive-turntable" src="./assets/archive-top-player.png" alt="" aria-hidden="true" />
           <div class="archive-bookcase" aria-label="월별 플레이리스트 책장">
-            <section class="archive-month" data-month="1"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="1">01</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="2"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="2">02</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="3"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="3">03</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="4"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="4">04</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="5"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="5">05</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="6"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="6">06</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="7"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="7">07</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="8"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="8">08</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="9"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="9">09</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="10"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="10">10</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="11"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="11">11</button></h2><div class="archive-shelf empty"></div></section>
-            <section class="archive-month" data-month="12"><h2><button type="button" class="archive-month-button" data-action="open-archive-month" data-month="12">12</button></h2><div class="archive-shelf empty"></div></section>
+            <section class="archive-month" data-month="1"><h2>01</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="1" aria-label="1월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="2"><h2>02</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="2" aria-label="2월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="3"><h2>03</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="3" aria-label="3월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="4"><h2>04</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="4" aria-label="4월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="5"><h2>05</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="5" aria-label="5월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="6"><h2>06</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="6" aria-label="6월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="7"><h2>07</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="7" aria-label="7월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="8"><h2>08</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="8" aria-label="8월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="9"><h2>09</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="9" aria-label="9월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="10"><h2>10</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="10" aria-label="10월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="11"><h2>11</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="11" aria-label="11월 플레이리스트 보기"></button></section>
+            <section class="archive-month" data-month="12"><h2>12</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="12" aria-label="12월 플레이리스트 보기"></button></section>
           </div>
         </div>
       </section>
@@ -225,9 +226,9 @@
           <button class="player-track" type="button" data-action="open-track-log" data-track-index="2"><span></span><strong>Lemonade<br />aespa</strong></button>
         </section>
         <div class="player-controls" aria-label="재생 컨트롤">
-          <button type="button" aria-label="이전 곡">◀◀</button>
+          <button type="button" data-action="player-prev" aria-label="이전 곡">◀◀</button>
           <button class="player-play" type="button" data-action="toggle-player-play" aria-label="재생">▶</button>
-          <button type="button" aria-label="다음 곡">▶▶</button>
+          <button type="button" data-action="player-next" aria-label="다음 곡">▶▶</button>
         </div>
       </section>
       <section class="screen record-page-screen" id="record-page-screen" aria-label="오늘의 기록">
@@ -385,8 +386,9 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260722-player-spin"></script>
+    <script src="./app.js?v=20260723-playback-transfer-log"></script>
   </body>
 </html>
 
