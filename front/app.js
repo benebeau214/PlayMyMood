@@ -111,6 +111,17 @@ async function loginWithSpotify() {
     showScreen(currentIndex + 1);
     return;
   }
+  // 테스트용: DEV_MODE면 Spotify 대신 익명 로그인으로 즉시 세션 생성.
+  if (PMM.DEV_MODE) {
+    const { error } = await sb.auth.signInAnonymously();
+    if (error) {
+      console.error("익명 로그인 실패:", error.message);
+      alert("익명 로그인 실패: " + error.message + "\n(Supabase → Authentication에서 Anonymous sign-ins를 켜야 해요)");
+      return;
+    }
+    showScreen(screens.indexOf("name-screen"));
+    return;
+  }
   const { error } = await sb.auth.signInWithOAuth({
     provider: "spotify",
     options: {
@@ -136,7 +147,309 @@ async function initAuth() {
   }
 }
 
+// --- 온보딩 값 수집 → Supabase 저장 ---
+const ERA_VALUES = ["2020s", "2010s", "2000s", "pre_2000s"];
 
+function readSelectedEra() {
+  const cards = Array.from(document.querySelectorAll("#era-screen .era-card"));
+  const index = cards.findIndex((card) => card.classList.contains("selected"));
+  return ERA_VALUES[index] ?? ERA_VALUES[0];
+}
+
+function readSelectedGenres() {
+  const cards = Array.from(document.querySelectorAll("#genre-screen .genre-card.selected"));
+  return cards
+    .map((card) => {
+      const genreClass = Array.from(card.classList).find(
+        (name) => name.startsWith("genre-") && name !== "genre-card",
+      );
+      return genreClass ? genreClass.replace("genre-", "") : null;
+    })
+    .filter(Boolean);
+}
+
+function readFamePreference() {
+  const value = Number(document.getElementById("hit-slider")?.value ?? 30);
+  return Math.round(value) / 100; // 0.00 ~ 1.00
+}
+
+function readSelectedCoverIndex() {
+  const cards = Array.from(document.querySelectorAll("#cover-screen .blank-card"));
+  return cards.findIndex((card) => card.classList.contains("selected"));
+}
+
+async function saveOnboarding() {
+  if (!sb) return;
+  const { data: sessionData } = await sb.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) {
+    console.warn("온보딩 저장 건너뜀: 로그인 세션 없음");
+    return;
+  }
+
+  const coverIndex = readSelectedCoverIndex();
+  let coverStyleId = null;
+  if (coverIndex >= 0) {
+    const { data: coverStyle } = await sb
+      .from("cover_styles")
+      .select("id")
+      .eq("code", `style_${coverIndex + 1}`)
+      .maybeSingle();
+    coverStyleId = coverStyle?.id ?? null;
+  }
+
+  const { error: prefError } = await sb.from("user_preferences").upsert(
+    {
+      user_id: user.id,
+      era: readSelectedEra(),
+      genres: readSelectedGenres(),
+      fame_preference: readFamePreference(),
+      cover_style_id: coverStyleId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (prefError) {
+    console.error("온보딩 저장 실패(user_preferences):", prefError.message);
+    return;
+  }
+
+  const { error: profileError } = await sb
+    .from("profiles")
+    .update({ onboarding_completed_at: new Date().toISOString() })
+    .eq("id", user.id);
+  if (profileError) {
+    console.error("온보딩 완료 표시 실패(profiles):", profileError.message);
+  } else {
+    console.log("온보딩 저장 완료 ✓");
+  }
+}
+
+// --- 기록(로그) 저장 → Supabase ---
+const EMOTION_VALUES = [
+  "행복한", "신나는", "설레는", "기쁜", "뿌듯한", "감동한", "편안한", "후련한",
+  "만족한", "짜릿한", "안도감", "그리운", "아련한", "뭉클한", "우울한", "외로운",
+  "속상한", "허무한", "피곤한", "짜증난", "화난", "불안한", "괴로운",
+];
+
+function readSelectedEmotions() {
+  const buttons = Array.from(document.querySelectorAll("#emotion-screen .emotion-choice.selected"));
+  const labels = buttons
+    .map((button) => button.querySelector("span")?.textContent?.trim())
+    .filter((label) => EMOTION_VALUES.includes(label));
+  const unique = [...new Set(labels)].slice(0, MAX_EMOTION_SELECTIONS);
+  if (unique.length === 0) {
+    // 감정 버튼이 아직 플레이스홀더("기쁨" 등)라 유효한 라벨이 없으면 테스트용 기본값으로 저장.
+    // index.html의 emotion-choice <span>을 실제 감정(행복한/신나는/…)으로 채우면 그대로 저장됨.
+    console.warn("유효한 감정 라벨 없음 → 기본값 ['기쁜']으로 저장 (감정 버튼 라벨을 실제 값으로 채워야 함)");
+    return ["기쁜"];
+  }
+  return unique;
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [meta, base64] = dataUrl.split(",");
+  const mime = meta.match(/data:(.*?);/)?.[1] || "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
+async function saveLog({ photo, caption, emotions }) {
+  if (!sb) return;
+  const { data: sessionData } = await sb.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) {
+    console.warn("로그 저장 건너뜀: 로그인 세션 없음");
+    return;
+  }
+
+  // 사진을 Storage(playmymood 버킷, <user_id>/logs/...)에 업로드.
+  if (!photo) {
+    console.error("로그 저장 실패: 사진이 없음 (photo_path는 필수)");
+    return;
+  }
+  const path = `${user.id}/logs/${crypto.randomUUID()}.jpg`;
+  const { error: uploadError } = await sb.storage
+    .from("playmymood")
+    .upload(path, dataUrlToBlob(photo), { contentType: "image/jpeg", upsert: false });
+  if (uploadError) {
+    console.error("사진 업로드 실패:", uploadError.message);
+    return;
+  }
+
+  const { data: inserted, error: insertError } = await sb
+    .from("daily_logs")
+    .insert({
+      user_id: user.id,
+      photo_path: path,
+      caption: caption || null,
+      emotions,
+    })
+    .select("id")
+    .single();
+  if (insertError) {
+    console.error("로그 저장 실패(daily_logs):", insertError.message);
+    return;
+  }
+  console.log("로그 저장 완료 ✓");
+
+  // 에이전트 서비스에 처리 요청(백그라운드). 서비스가 꺼져 있어도 로그 저장엔 영향 없음.
+  if (PMM.AGENT_SERVICE_URL && inserted?.id) {
+    fetch(`${PMM.AGENT_SERVICE_URL}/process-log`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ log_id: inserted.id }),
+    })
+      .then((res) => {
+        if (res.ok) console.log("에이전트 처리 요청 보냄 (situation/스티커 등 채워짐)");
+        else console.warn("에이전트 서비스 응답 오류:", res.status);
+      })
+      .catch(() => console.warn("에이전트 서비스 호출 실패 (서비스가 안 켜져 있을 수 있음)"));
+  }
+}
+
+// --- 플레이리스트 생성 + 편집 화면 렌더 ---
+function todayKstDate() {
+  // en-CA 로케일 → "YYYY-MM-DD" (daily_logs.log_date 형식)
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+async function signedUrl(path) {
+  // 비공개 버킷이라 조회 시 서명 URL 생성.
+  if (!sb || !path) return null;
+  const { data } = await sb.storage.from("playmymood").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+async function generatePlaylist() {
+  if (!sb) {
+    showScreen(screens.indexOf("playlist-edit-screen"));
+    return;
+  }
+  const { data: sessionData } = await sb.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) {
+    showScreen(screens.indexOf("playlist-edit-screen"));
+    return;
+  }
+
+  showScreen(screens.indexOf("playlist-loading-screen"));
+
+  // 서비스에 그날 로그별 추천 곡 생성 요청 (완료까지 대기 — mood_music_agent가 로그마다 돎).
+  if (PMM.AGENT_SERVICE_URL) {
+    try {
+      await fetch(`${PMM.AGENT_SERVICE_URL}/generate-playlist`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: user.id, date: todayKstDate() }),
+      });
+    } catch (error) {
+      console.warn("플리 생성 서비스 호출 실패:", error);
+    }
+  }
+
+  await renderPlaylistEdit(user.id);
+  hasTodayPlaylist = true;
+  updateTodayPlaylistButton();
+  showScreen(screens.indexOf("playlist-edit-screen"));
+}
+
+async function renderPlaylistEdit(userId) {
+  if (!sb) return;
+  const date = todayKstDate();
+  const { data: logs, error } = await sb
+    .from("daily_logs")
+    .select("id, caption, photo_path, sticker_path, tracks(title, artists)")
+    .eq("user_id", userId)
+    .eq("log_date", date)
+    .order("logged_at");
+  if (error) {
+    console.error("플리 편집 로드 실패:", error.message);
+    return;
+  }
+  const dayLogs = logs || [];
+
+  const dateEl = document.querySelector("#playlist-edit-screen .playlist-date");
+  if (dateEl) dateEl.textContent = formatToday();
+
+  // 트랙 행: 로그 사진(썸네일) + 추천 곡(제목/가수)
+  const list = document.querySelector("#playlist-edit-screen .playlist-list");
+  if (list) {
+    list.querySelectorAll(".track-row").forEach((row) => row.remove());
+    for (let index = 0; index < dayLogs.length; index += 1) {
+      const log = dayLogs[index];
+      const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
+
+      const row = document.createElement("div");
+      row.className = "track-row";
+
+      const thumb = document.createElement("span");
+      thumb.className = "track-thumb";
+      const photoUrl = await signedUrl(log.photo_path);
+      if (photoUrl) {
+        thumb.style.backgroundImage = `url("${photoUrl}")`;
+        thumb.style.backgroundSize = "cover";
+        thumb.style.backgroundPosition = "center";
+      }
+
+      const info = document.createElement("span");
+      const title = track?.title || "추천 곡 준비중";
+      const artist = (track?.artists && track.artists[0]) || "";
+      info.innerHTML = `${title}<br />${artist}`;
+
+      const more = document.createElement("button");
+      more.type = "button";
+      more.dataset.action = "open-track-log";
+      more.dataset.trackIndex = String(index);
+      more.setAttribute("aria-label", "노래 로그 보기");
+      more.textContent = "•••";
+
+      row.append(thumb, info, more);
+      list.append(row);
+    }
+  }
+
+  // 커버(핑크 사각형)에 그날 스티커들 오버레이
+  const coverSquare = document.querySelector("#playlist-edit-screen .cover-square");
+  if (coverSquare) {
+    coverSquare.querySelectorAll(".cover-sticker").forEach((sticker) => sticker.remove());
+    coverSquare.style.position = "relative";
+    coverSquare.style.overflow = "hidden";
+    const positions = [
+      { left: "6%", top: "8%" },
+      { left: "52%", top: "6%" },
+      { left: "12%", top: "48%" },
+      { left: "54%", top: "50%" },
+      { left: "32%", top: "28%" },
+    ];
+    let placed = 0;
+    for (const log of dayLogs) {
+      if (!log.sticker_path) continue;
+      const url = await signedUrl(log.sticker_path);
+      if (!url) continue;
+      const image = document.createElement("img");
+      image.className = "cover-sticker";
+      image.src = url;
+      image.alt = "";
+      const pos = positions[placed % positions.length];
+      image.style.position = "absolute";
+      image.style.left = pos.left;
+      image.style.top = pos.top;
+      image.style.width = "40%";
+      coverSquare.append(image);
+      placed += 1;
+    }
+  }
+}
 
 function formatToday() {
   const parts = new Intl.DateTimeFormat("ko-KR", {
@@ -434,6 +747,74 @@ function renderPlaylistPlayer() {
       playerLogPhoto.append(image);
     }
   }
+  renderPlayerTracks();
+}
+
+async function renderPlayerTracks() {
+  if (!sb) return;
+  const { data: sessionData } = await sb.auth.getSession();
+  const user = sessionData.session?.user;
+  if (!user) return;
+  const date = todayKstDate();
+  const { data: logs, error } = await sb
+    .from("daily_logs")
+    .select("id, caption, photo_path, tracks(title, artists)")
+    .eq("user_id", user.id)
+    .eq("log_date", date)
+    .order("logged_at");
+  if (error) {
+    console.error("플레이어 트랙 로드 실패:", error.message);
+    return;
+  }
+  const dayLogs = logs || [];
+
+  // 대표 로그 사진/캡션을 실제 저장 데이터로(새로고침해도 유지되게)
+  const first = dayLogs[0];
+  if (first) {
+    if (playerLogCaption) playerLogCaption.textContent = first.caption || "오늘 하루를 기록했어요";
+    if (playerLogPhoto) {
+      const url = await signedUrl(first.photo_path);
+      if (url) {
+        playerLogPhoto.replaceChildren();
+        playerLogPhoto.classList.add("has-photo");
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = "대표 로그 사진";
+        playerLogPhoto.append(image);
+      }
+    }
+  }
+
+  // 트랙 목록: 로그 사진 + 추천 곡(제목/가수)
+  const list = document.querySelector("#playlist-player-screen .player-track-list");
+  if (!list) return;
+  list.querySelectorAll(".player-track").forEach((row) => row.remove());
+  for (let index = 0; index < dayLogs.length; index += 1) {
+    const log = dayLogs[index];
+    const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
+
+    const button = document.createElement("button");
+    button.className = "player-track";
+    button.type = "button";
+    button.dataset.action = "open-track-log";
+    button.dataset.trackIndex = String(index);
+
+    const thumb = document.createElement("span");
+    const photoUrl = await signedUrl(log.photo_path);
+    if (photoUrl) {
+      thumb.style.backgroundImage = `url("${photoUrl}")`;
+      thumb.style.backgroundSize = "cover";
+      thumb.style.backgroundPosition = "center";
+    }
+
+    const strong = document.createElement("strong");
+    const title = track?.title || "추천 곡 준비중";
+    const artist = (track?.artists && track.artists[0]) || "";
+    strong.innerHTML = `${title}<br />${artist}`;
+
+    button.append(thumb, strong);
+    list.append(button);
+  }
 }
 
 function getTrackLog(index) {
@@ -561,7 +942,9 @@ function showScreen(index) {
       showScreen(screens.indexOf("record-page-screen"));
     }, 2000);
   }
-  if (currentScreen === "playlist-loading-screen") {
+  // playlist-loading-screen 전환은 generatePlaylist()가 직접 제어한다(서비스 응답 후 편집 화면으로).
+  // sb 미설정(프로토타입) 시에만 옛 타이머로 자동 진행.
+  if (currentScreen === "playlist-loading-screen" && !sb) {
     playlistTimer = setTimeout(() => {
       showScreen(screens.indexOf("playlist-edit-screen"));
     }, 3000);
@@ -759,6 +1142,8 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "start-onboarding") {
+    // 온보딩 마지막 화면 "시작하기" → 선택값(연대/장르/유명도)을 Supabase에 저장하고 홈으로.
+    saveOnboarding();
     showScreen(screens.indexOf("record-home-screen"));
     return;
   }
@@ -826,6 +1211,12 @@ document.addEventListener("click", (event) => {
     return;
   }
   if (action === "save-log") {
+    // Supabase 저장 (사진 업로드 + daily_logs insert). 값이 아래에서 초기화되기 전에 넘긴다.
+    saveLog({
+      photo: capturedPhotoDataUrl,
+      caption: pendingNote,
+      emotions: readSelectedEmotions(),
+    });
     logs.push({
       caption: pendingNote,
       photo: capturedPhotoDataUrl,
@@ -859,7 +1250,7 @@ document.addEventListener("click", (event) => {
       playerEntryMode = "home";
       showScreen(screens.indexOf("playlist-player-screen"));
     } else {
-      showScreen(screens.indexOf("playlist-loading-screen"));
+      generatePlaylist();
     }
     return;
   }

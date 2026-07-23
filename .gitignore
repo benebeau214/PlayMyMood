@@ -1,4 +1,6 @@
 .env
+service/.env.example
+service/.env
 __pycache__/
 *.pyc
 generated_stickers*/

@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+supabase>=2.4
+pydantic>=2.0
+python-dotenv>=1.0
+# 스티커 이미지 후처리(선택): emoji_sticker_agent가 Pillow를 사용
+Pillow>=10.0
