@@ -35,18 +35,30 @@ const screens = [
 ];
 
 let currentIndex = 0;
-let logCount = 0;
 const logs = [];
-const archivePlaylistCounts = Array(12).fill(0);
-const archivePlaylists = Array.from({ length: 12 }, () => []);
+// 트랙 "•••" 로그 팝업용: 화면에 마지막으로 그려진 트랙 목록의 실제 사진/캡션/날짜.
+// (오늘/아카이브 어느 날짜를 보고 있든 항상 그 화면이 채운 값을 그대로 씀)
+let currentTrackLogs = [];
+let archiveMonthCounts = Array(12).fill(0);
+let activeMonthPlaylists = [];
 let activeArchiveMonth = getCurrentMonthNumber();
+let activeArchiveYear = getCurrentYearNumber();
 let activeArchivePlaylistIndex = 0;
+let activePlayerDate = null;
 let pendingNote = "";
 let completeTimer = null;
 let playlistTimer = null;
 let hasTodayPlaylist = false;
 let playerEntryMode = "archive";
 let isPlayerPlaying = false;
+
+// --- Spotify Web Playback SDK 상태 ---
+let spotifyPlayer = null;
+let spotifyDeviceId = null;
+let spotifyReady = false;
+let spotifyPlaybackStarted = false;
+let currentTrackUris = [];
+let currentTrackIndex = 0;
 
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
@@ -90,7 +102,6 @@ let cameraFacingMode = "environment";
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
 const MAX_EMOTION_SELECTIONS = 9;
-let staffNoteCount = 0;
 let selectedMoodNotes = [];
 
 // --- Supabase / Spotify 로그인 ---
@@ -119,6 +130,8 @@ async function loginWithSpotify() {
       alert("익명 로그인 실패: " + error.message + "\n(Supabase → Authentication에서 Anonymous sign-ins를 켜야 해요)");
       return;
     }
+    // 익명 로그인은 실제 Spotify 토큰이 없어서 initSpotifyPlayerIfPossible()가 조용히 스킵됨.
+    initSpotifyPlayerIfPossible();
     showScreen(screens.indexOf("name-screen"));
     return;
   }
@@ -136,15 +149,173 @@ async function loginWithSpotify() {
   // 성공 시 브라우저가 Spotify로 리다이렉트되고, 돌아오면 initAuth()가 세션을 감지한다.
 }
 
+async function logout() {
+  if (spotifyPlayer) {
+    spotifyPlayer.disconnect();
+    spotifyPlayer = null;
+  }
+  spotifyDeviceId = null;
+  spotifyReady = false;
+  spotifyPlaybackStarted = false;
+  currentTrackUris = [];
+  currentTrackLogs = [];
+  hasTodayPlaylist = false;
+  logs.length = 0;
+  activeMonthPlaylists = [];
+  activeArchivePlaylistIndex = 0;
+  activePlayerDate = null;
+  pendingNote = "";
+  capturedPhotoDataUrl = "";
+  selectedMoodNotes = [];
+  if (sb) await sb.auth.signOut();
+  showScreen(screens.indexOf("login-screen"));
+}
+
 async function initAuth() {
   if (!sb) return;
   // OAuth 리다이렉트로 돌아오면 supabase-js가 URL에서 세션을 자동 복원한다(detectSessionInUrl 기본값).
   const { data } = await sb.auth.getSession();
   if (data.session) {
-    // TODO: onboarding_completed_at / user_preferences로 온보딩 완료 여부를 확인해
-    //       완료된 유저는 record-home으로 보내기. 지금은 온보딩 시작 화면으로.
-    showScreen(screens.indexOf("name-screen"));
+    initSpotifyPlayerIfPossible();
+    const { data: profile } = await sb
+      .from("profiles")
+      .select("onboarding_completed_at")
+      .eq("id", data.session.user.id)
+      .maybeSingle();
+    showScreen(screens.indexOf(profile?.onboarding_completed_at ? "record-home-screen" : "name-screen"));
   }
+}
+
+// --- Spotify Web Playback SDK ---
+function trackIdFromSpotifyUrl(url) {
+  const match = (url || "").match(/track[/:]([A-Za-z0-9]+)/);
+  return match ? match[1] : null;
+}
+
+async function getSpotifyAccessToken() {
+  if (!sb) return null;
+  const { data } = await sb.auth.getSession();
+  return data.session?.provider_token || null;
+}
+
+window.onSpotifyWebPlaybackSDKReady = () => {
+  spotifyReady = true;
+  initSpotifyPlayerIfPossible();
+};
+
+async function initSpotifyPlayerIfPossible() {
+  if (!spotifyReady || spotifyPlayer || !window.Spotify) return;
+  const token = await getSpotifyAccessToken();
+  // DEV_MODE 익명 로그인 등 실제 Spotify OAuth 토큰이 없으면 재생 기능은 조용히 비활성.
+  if (!token) return;
+
+  spotifyPlayer = new window.Spotify.Player({
+    name: "Play My Mood",
+    getOAuthToken: async (callback) => {
+      // 주의: Supabase는 자체 세션(JWT) 갱신 시 provider_token(스포티파이 access token)을
+      // 함께 갱신해주지 않는다. 토큰은 로그인 직후 ~1시간 동안만 유효하며, 만료되면
+      // 재생을 위해 다시 로그인해야 한다(서버 쪽 refresh 프록시는 아직 없음).
+      const freshToken = await getSpotifyAccessToken();
+      callback(freshToken || token);
+    },
+    volume: 0.8,
+  });
+
+  spotifyPlayer.addListener("ready", ({ device_id }) => {
+    spotifyDeviceId = device_id;
+    console.log("Spotify 플레이어 준비 완료, device_id =", device_id);
+  });
+  spotifyPlayer.addListener("not_ready", () => {
+    spotifyDeviceId = null;
+  });
+  spotifyPlayer.addListener("initialization_error", ({ message }) =>
+    console.error("Spotify 초기화 실패:", message),
+  );
+  spotifyPlayer.addListener("authentication_error", ({ message }) =>
+    console.error("Spotify 인증 실패:", message),
+  );
+  spotifyPlayer.addListener("account_error", ({ message }) =>
+    console.error("Spotify 계정 오류(Premium 계정이 아니면 재생 불가):", message),
+  );
+  spotifyPlayer.addListener("player_state_changed", (state) => {
+    if (!state) return;
+    setPlayerPlaying(!state.paused);
+  });
+
+  await spotifyPlayer.connect();
+}
+
+async function transferPlaybackToThisDevice(token) {
+  // 재생 전에 Spotify Connect가 이 기기를 "활성 기기"로 인식하도록 명시적으로 이전 요청.
+  // (핸드폰/데스크톱 앱 등 다른 기기가 이미 활성 상태면 곧바로 play를 걸었을 때
+  //  "Restriction violated" 403이 나는 경우가 있어서 이 단계가 필요함)
+  const response = await fetch("https://api.spotify.com/v1/me/player", {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ device_ids: [spotifyDeviceId], play: false }),
+  });
+  if (response.ok) {
+    console.log(`[기기 이전] 성공 (status=${response.status})`);
+  } else {
+    const body = await response.text().catch(() => "");
+    console.warn(`[기기 이전] 실패 (status=${response.status}): ${body}`);
+  }
+  return response.ok;
+}
+
+async function playSpotifyTrackAt(index) {
+  if (!spotifyDeviceId) {
+    console.warn("재생 불가: Spotify 기기(device_id)가 아직 준비되지 않음 (ready 이벤트 대기 중이거나 Premium 계정이 아닐 수 있음)");
+    return;
+  }
+  if (!currentTrackUris.length) {
+    console.warn("재생 불가: 이 날짜에 Spotify 트랙 URI가 없음 (tracks.spotify_url이 비어있을 수 있음)");
+    return;
+  }
+  const token = await getSpotifyAccessToken();
+  if (!token) {
+    console.warn("재생 불가: Spotify access token 없음 (DEV_MODE 익명 로그인이거나 세션에 provider_token이 없음)");
+    return;
+  }
+  currentTrackIndex = ((index % currentTrackUris.length) + currentTrackUris.length) % currentTrackUris.length;
+  const uri = currentTrackUris[currentTrackIndex];
+  console.log("[재생 시도] uri =", uri);
+  await transferPlaybackToThisDevice(token);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // ready 직후엔 Spotify 서버가 아직 이 device_id를 재생 가능 기기로 인식하기 전이라
+  // 404(Device not found)가 잠깐 날 수 있다 — 짧게 텀을 두고 몇 번 재시도.
+  const delays = [0, 400, 800, 1500];
+  let lastError = null;
+  for (const delay of delays) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ uris: [uri] }),
+    });
+    if (response.ok) {
+      console.log("[재생 성공]");
+      return;
+    }
+    const body = await response.text().catch(() => "");
+    lastError = { status: response.status, body };
+    if (response.status !== 404) break; // 404(기기 미등록)만 재시도, 그 외 에러는 바로 표시.
+  }
+  console.error(
+    `Spotify 재생 API 실패 (status=${lastError.status}): ${lastError.body}` +
+      (lastError.status === 403
+        ? " → scope에 user-modify-playback-state가 없거나 계정이 Premium이 아닐 수 있음"
+        : lastError.status === 404
+          ? " → device_id가 계속 인식되지 않음. 탭을 새로고침해서 SDK를 다시 연결해보세요"
+          : ""),
+  );
 }
 
 // --- 온보딩 값 수집 → Supabase 저장 ---
@@ -169,7 +340,7 @@ function readSelectedGenres() {
 }
 
 function readFamePreference() {
-  const value = Number(document.getElementById("hit-slider")?.value ?? 30);
+  const value = Number(hitSlider?.value ?? 30);
   return Math.round(value) / 100; // 0.00 ~ 1.00
 }
 
@@ -330,6 +501,21 @@ async function signedUrl(path) {
   return data?.signedUrl ?? null;
 }
 
+async function ensurePlaylistRow(userId, date) {
+  // playlists 행을 미리 만들어둔다(title/description은 나중에 편집 화면에서 채움).
+  // upsert는 지정한 컬럼만 갱신하므로 이미 title이 있는 행을 재생성해도 덮어쓰지 않는다.
+  const { error } = await sb.from("playlists").upsert(
+    {
+      user_id: userId,
+      playlist_date: date,
+      status: "ready",
+      generated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,playlist_date" },
+  );
+  if (error) console.error("playlists 저장 실패:", error.message);
+}
+
 async function generatePlaylist() {
   if (!sb) {
     showScreen(screens.indexOf("playlist-edit-screen"));
@@ -344,31 +530,44 @@ async function generatePlaylist() {
 
   showScreen(screens.indexOf("playlist-loading-screen"));
 
+  const date = todayKstDate();
+  await ensurePlaylistRow(user.id, date);
+
   // 서비스에 그날 로그별 추천 곡 생성 요청 (완료까지 대기 — mood_music_agent가 로그마다 돎).
   if (PMM.AGENT_SERVICE_URL) {
     try {
       await fetch(`${PMM.AGENT_SERVICE_URL}/generate-playlist`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ user_id: user.id, date: todayKstDate() }),
+        body: JSON.stringify({ user_id: user.id, date }),
       });
     } catch (error) {
       console.warn("플리 생성 서비스 호출 실패:", error);
     }
   }
 
-  await renderPlaylistEdit(user.id);
+  await renderPlaylistEdit(user.id, date);
   hasTodayPlaylist = true;
   updateTodayPlaylistButton();
   showScreen(screens.indexOf("playlist-edit-screen"));
 }
 
-async function renderPlaylistEdit(userId) {
+async function renderPlaylistEdit(userId, date = todayKstDate()) {
   if (!sb) return;
-  const date = todayKstDate();
-  const { data: logs, error } = await sb
+
+  // 이전에 입력해둔 제목/소개(있으면) 미리 채우기.
+  const { data: playlistRow } = await sb
+    .from("playlists")
+    .select("title, description")
+    .eq("user_id", userId)
+    .eq("playlist_date", date)
+    .maybeSingle();
+  if (playlistTitleInput && playlistRow?.title) playlistTitleInput.value = playlistRow.title;
+  if (playlistIntroInput && playlistRow?.description) playlistIntroInput.value = playlistRow.description;
+
+  const { data: logRows, error } = await sb
     .from("daily_logs")
-    .select("id, caption, photo_path, sticker_path, tracks(title, artists)")
+    .select("id, caption, photo_path, sticker_path, logged_at, tracks(title, artists)")
     .eq("user_id", userId)
     .eq("log_date", date)
     .order("logged_at");
@@ -376,13 +575,14 @@ async function renderPlaylistEdit(userId) {
     console.error("플리 편집 로드 실패:", error.message);
     return;
   }
-  const dayLogs = logs || [];
+  const dayLogs = logRows || [];
 
   const dateEl = document.querySelector("#playlist-edit-screen .playlist-date");
   if (dateEl) dateEl.textContent = formatToday();
 
   // 트랙 행: 로그 사진(썸네일) + 추천 곡(제목/가수)
   const list = document.querySelector("#playlist-edit-screen .playlist-list");
+  currentTrackLogs = [];
   if (list) {
     list.querySelectorAll(".track-row").forEach((row) => row.remove());
     for (let index = 0; index < dayLogs.length; index += 1) {
@@ -400,6 +600,12 @@ async function renderPlaylistEdit(userId) {
         thumb.style.backgroundSize = "cover";
         thumb.style.backgroundPosition = "center";
       }
+      currentTrackLogs[index] = {
+        caption: log.caption,
+        photo: photoUrl,
+        date: formatDisplayDate(date),
+        time: formatDisplayTime(log.logged_at),
+      };
 
       const info = document.createElement("span");
       const title = track?.title || "추천 곡 준비중";
@@ -419,36 +625,46 @@ async function renderPlaylistEdit(userId) {
   }
 
   // 커버(핑크 사각형)에 그날 스티커들 오버레이
-  const coverSquare = document.querySelector("#playlist-edit-screen .cover-square");
-  if (coverSquare) {
-    coverSquare.querySelectorAll(".cover-sticker").forEach((sticker) => sticker.remove());
-    coverSquare.style.position = "relative";
-    coverSquare.style.overflow = "hidden";
-    const positions = [
-      { left: "6%", top: "8%" },
-      { left: "52%", top: "6%" },
-      { left: "12%", top: "48%" },
-      { left: "54%", top: "50%" },
-      { left: "32%", top: "28%" },
-    ];
-    let placed = 0;
-    for (const log of dayLogs) {
-      if (!log.sticker_path) continue;
-      const url = await signedUrl(log.sticker_path);
-      if (!url) continue;
-      const image = document.createElement("img");
-      image.className = "cover-sticker";
-      image.src = url;
-      image.alt = "";
-      const pos = positions[placed % positions.length];
-      image.style.position = "absolute";
-      image.style.left = pos.left;
-      image.style.top = pos.top;
-      image.style.width = "40%";
-      coverSquare.append(image);
-      placed += 1;
-    }
+  await renderStickerCover(document.querySelector("#playlist-edit-screen .cover-square"), dayLogs);
+}
+
+// 그날 로그들의 sticker_path를 정사각형 커버 위에 겹쳐 그린다.
+// (오늘 플리 편집 화면 / 아카이브 상세 화면에서 공용으로 사용)
+async function renderStickerCover(coverEl, dayLogs) {
+  if (!coverEl) return;
+  coverEl.querySelectorAll(".cover-sticker").forEach((sticker) => sticker.remove());
+  // position은 건드리지 않는다 — 두 재사용처(.cover-square div, .archive-detail-square span)
+  // 모두 스타일시트에서 이미 position:absolute라 그 자체로 자식 절대배치 기준이 된다.
+  // 여기서 relative로 덮어쓰면 <span>(inline 기본값)의 width/height가 무시돼 찌그러짐.
+  coverEl.style.overflow = "hidden";
+  const positions = [
+    { left: "6%", top: "8%" },
+    { left: "52%", top: "6%" },
+    { left: "12%", top: "48%" },
+    { left: "54%", top: "50%" },
+    { left: "32%", top: "28%" },
+  ];
+  let placed = 0;
+  for (const log of dayLogs) {
+    if (!log.sticker_path) continue;
+    const url = await signedUrl(log.sticker_path);
+    if (!url) continue;
+    const image = document.createElement("img");
+    image.className = "cover-sticker";
+    image.src = url;
+    image.alt = "";
+    const pos = positions[placed % positions.length];
+    image.style.position = "absolute";
+    image.style.left = pos.left;
+    image.style.top = pos.top;
+    image.style.width = "40%";
+    coverEl.append(image);
+    placed += 1;
   }
+}
+
+function formatDisplayDate(isoDate) {
+  return (isoDate || "").replaceAll("-", ".");
 }
 
 function formatToday() {
@@ -631,53 +847,116 @@ function getCurrentMonthNumber() {
   }).format(new Date()));
 }
 
+function getCurrentYearNumber() {
+  return Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+  }).format(new Date()));
+}
+
+function updateArchiveYearLabel() {
+  const label = document.getElementById("archive-year-label");
+  if (label) label.textContent = String(activeArchiveYear);
+}
+
+async function currentUserId() {
+  if (!sb) return null;
+  const { data } = await sb.auth.getSession();
+  return data.session?.user?.id || null;
+}
+
+async function loadArchiveMonthCounts() {
+  archiveMonthCounts = Array(12).fill(0);
+  const userId = await currentUserId();
+  if (!userId) return;
+  const year = activeArchiveYear;
+  const { data, error } = await sb
+    .from("playlists")
+    .select("playlist_date")
+    .eq("user_id", userId)
+    .not("title", "is", null)
+    .gte("playlist_date", `${year}-01-01`)
+    .lte("playlist_date", `${year}-12-31`);
+  if (error) {
+    console.error("아카이브 개수 조회 실패:", error.message);
+    return;
+  }
+  for (const row of data || []) {
+    const month = Number(row.playlist_date.slice(5, 7));
+    archiveMonthCounts[month - 1] += 1;
+  }
+}
+
 function renderArchiveShelves() {
   const shelves = document.querySelectorAll(".archive-shelf");
   shelves.forEach((shelf, monthIndex) => {
     shelf.replaceChildren();
-    const count = archivePlaylistCounts[monthIndex] || 0;
+    const count = archiveMonthCounts[monthIndex] || 0;
+    shelf.classList.toggle("empty", count === 0);
+    // 왼쪽부터 딱 붙여서 전부 직립으로 쌓는다. (마지막 1장 기울이는 건 잠시 보류)
+    const lpWidth = 13;
     for (let index = 0; index < count; index += 1) {
       const lp = document.createElement("span");
-      lp.className = `archive-lp archive-lp-${(index % 6) + 1}`;
-      lp.style.left = `${18 + index * 24}px`;
+      lp.className = `archive-lp archive-lp-color-${(index % 6) + 1}`;
+      lp.style.left = `${index * lpWidth}px`;
       lp.style.zIndex = String(index + 1);
       shelf.append(lp);
     }
   });
 }
 
-function addPlaylistToArchive() {
-  const month = getCurrentMonthNumber();
-  archivePlaylists[month - 1].push(createArchivePlaylist());
-  archivePlaylistCounts[month - 1] = archivePlaylists[month - 1].length;
+async function refreshArchiveShelves() {
+  await loadArchiveMonthCounts();
   renderArchiveShelves();
 }
 
 function formatArchiveMonth(month) {
-  const year = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-  }).format(new Date());
+  const year = activeArchiveYear;
   return `${year}.${String(month).padStart(2, "0")}`;
 }
 
-function createArchivePlaylist() {
-  const title = playlistTitleInput?.value.trim() || "제목 없는 플리";
-  const desc = playlistIntroInput?.value.trim() || "짧은 소개글이 아직 없어요.";
-  return {
-    date: formatToday(),
-    title,
-    desc,
-  };
+async function firstStickerUrlForDate(userId, date) {
+  const { data, error } = await sb
+    .from("daily_logs")
+    .select("sticker_path")
+    .eq("user_id", userId)
+    .eq("log_date", date)
+    .not("sticker_path", "is", null)
+    .order("logged_at")
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.sticker_path) return null;
+  return signedUrl(data.sticker_path);
 }
 
-function renderArchiveMonthView(month = activeArchiveMonth) {
+async function renderArchiveMonthView(month = activeArchiveMonth) {
   activeArchiveMonth = month;
-  const playlists = archivePlaylists[month - 1] || [];
+  activeArchivePlaylistIndex = 0;
   if (archiveMonthTitle) archiveMonthTitle.textContent = formatArchiveMonth(month);
   archiveMonthCarousel?.replaceChildren();
+  activeMonthPlaylists = [];
 
-  if (!playlists.length) {
+  const userId = await currentUserId();
+  if (!userId) return;
+
+  const year = activeArchiveYear;
+  const monthStr = String(month).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+  const { data, error } = await sb
+    .from("playlists")
+    .select("id, playlist_date, title, description")
+    .eq("user_id", userId)
+    .not("title", "is", null)
+    .gte("playlist_date", `${year}-${monthStr}-01`)
+    .lte("playlist_date", `${year}-${monthStr}-${String(lastDay).padStart(2, "0")}`)
+    .order("playlist_date");
+  if (error) {
+    console.error("월별 플리 조회 실패:", error.message);
+    return;
+  }
+  activeMonthPlaylists = data || [];
+
+  if (!activeMonthPlaylists.length) {
     const empty = document.createElement("p");
     empty.className = "archive-empty-message";
     empty.textContent = "아직 만든 플리가 없어요";
@@ -687,37 +966,94 @@ function renderArchiveMonthView(month = activeArchiveMonth) {
     return;
   }
 
-  playlists.forEach((playlist, index) => {
+  activeMonthPlaylists.forEach((playlist, index) => {
     const card = document.createElement("button");
     card.className = "archive-album-card";
     card.type = "button";
     card.dataset.action = "open-archive-detail";
     card.dataset.index = String(index);
-    card.innerHTML = `<span class="archive-album-date">${playlist.date}</span><span class="archive-album-cover"></span>`;
+    card.innerHTML = `<span class="archive-album-date">${formatDisplayDate(playlist.playlist_date)}</span><span class="archive-album-cover"></span>`;
     archiveMonthCarousel?.append(card);
   });
 
-  const first = playlists[0];
-  if (archiveMonthPlaylistTitle) archiveMonthPlaylistTitle.textContent = first.title;
-  if (archiveMonthPlaylistDesc) archiveMonthPlaylistDesc.textContent = first.desc;
+  const first = activeMonthPlaylists[0];
+  if (archiveMonthPlaylistTitle) archiveMonthPlaylistTitle.textContent = first.title || "제목 없는 플리";
+  if (archiveMonthPlaylistDesc) archiveMonthPlaylistDesc.textContent = first.description || "짧은 소개글이 아직 없어요.";
   requestAnimationFrame(() => {
     archiveMonthCarousel?.scrollTo({ left: 0, behavior: "auto" });
   });
+
+  // 카드별 커버(그날 첫 스티커)를 비동기로 채운다.
+  const cards = archiveMonthCarousel ? Array.from(archiveMonthCarousel.querySelectorAll(".archive-album-card")) : [];
+  for (let index = 0; index < activeMonthPlaylists.length; index += 1) {
+    const coverEl = cards[index]?.querySelector(".archive-album-cover");
+    if (!coverEl) continue;
+    const stickerUrl = await firstStickerUrlForDate(userId, activeMonthPlaylists[index].playlist_date);
+    if (stickerUrl) {
+      coverEl.style.backgroundImage = `url("${stickerUrl}")`;
+      coverEl.style.backgroundSize = "cover";
+      coverEl.style.backgroundPosition = "center";
+    }
+  }
 }
 
-function getActiveArchivePlaylist() {
-  const playlists = archivePlaylists[activeArchiveMonth - 1] || [];
-  return playlists[activeArchivePlaylistIndex] || playlists[0] || createArchivePlaylist();
+function getActiveArchivePlaylistRow() {
+  return activeMonthPlaylists[activeArchivePlaylistIndex] || null;
 }
 
-function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
+async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
   activeArchivePlaylistIndex = index;
-  const playlist = getActiveArchivePlaylist();
+  const playlist = getActiveArchivePlaylistRow();
   if (archiveDetailTitle) archiveDetailTitle.textContent = formatArchiveMonth(activeArchiveMonth);
-  if (archiveDetailDate) archiveDetailDate.textContent = playlist.date;
-  if (archiveDetailName) archiveDetailName.textContent = playlist.title;
-}
 
+  const tracksSection = document.querySelector("#archive-playlist-detail-screen .archive-detail-tracks");
+  tracksSection?.querySelectorAll(".archive-detail-track").forEach((row) => row.remove());
+
+  if (!playlist) {
+    if (archiveDetailDate) archiveDetailDate.textContent = "";
+    if (archiveDetailName) archiveDetailName.textContent = "";
+    return;
+  }
+  if (archiveDetailDate) archiveDetailDate.textContent = formatDisplayDate(playlist.playlist_date);
+  if (archiveDetailName) archiveDetailName.textContent = playlist.title || "제목 없는 플리";
+
+  const userId = await currentUserId();
+  if (!userId) return;
+
+  const { data: dayLogs, error } = await sb
+    .from("daily_logs")
+    .select("id, photo_path, sticker_path, tracks(title, artists, spotify_url)")
+    .eq("user_id", userId)
+    .eq("log_date", playlist.playlist_date)
+    .order("logged_at");
+  if (error) {
+    console.error("아카이브 상세 로드 실패:", error.message);
+    return;
+  }
+
+  await renderStickerCover(document.querySelector("#archive-playlist-detail-screen .archive-detail-square"), dayLogs || []);
+
+  if (tracksSection) {
+    for (const log of dayLogs || []) {
+      const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
+      const row = document.createElement("div");
+      row.className = "archive-detail-track";
+      const thumb = document.createElement("span");
+      const photoUrl = await signedUrl(log.photo_path);
+      if (photoUrl) {
+        thumb.style.backgroundImage = `url("${photoUrl}")`;
+        thumb.style.backgroundSize = "cover";
+        thumb.style.backgroundPosition = "center";
+      }
+      const info = document.createElement("p");
+      const title = track?.title || "추천 곡 준비중";
+      const artist = (track?.artists && track.artists[0]) || "";
+      info.innerHTML = `${title}<br />${artist}`;
+      row.append(thumb, info);
+      tracksSection.append(row);
+    }
+  }
+}
 
 function setPlayerPlaying(isPlaying) {
   isPlayerPlaying = isPlaying;
@@ -725,53 +1061,60 @@ function setPlayerPlaying(isPlaying) {
   playerPlayButton?.classList.toggle("is-playing", isPlayerPlaying);
   playerPlayButton?.setAttribute("aria-label", isPlayerPlaying ? "일시정지" : "재생");
 }
-function renderPlaylistPlayer() {
+
+async function renderPlaylistPlayer() {
   const isHomeEntry = playerEntryMode === "home";
   if (playerNavButton) {
     playerNavButton.classList.toggle("home-mode", isHomeEntry);
     playerNavButton.textContent = isHomeEntry ? "" : "←";
     playerNavButton.setAttribute("aria-label", isHomeEntry ? "홈으로 돌아가기" : "뒤로");
   }
-  const playlist = getActiveArchivePlaylist();
-  const firstLog = getTrackLog(0);
-  if (playerDate) playerDate.textContent = playlist.date;
-  if (playerTitle) playerTitle.textContent = playlist.title;
-  if (playerLogCaption) playerLogCaption.textContent = firstLog.caption || "오늘 하루를 기록했어요";
-  if (playerLogPhoto) {
-    playerLogPhoto.replaceChildren();
-    playerLogPhoto.classList.toggle("has-photo", Boolean(firstLog.photo));
-    if (firstLog.photo) {
-      const image = document.createElement("img");
-      image.src = firstLog.photo;
-      image.alt = "대표 로그 사진";
-      playerLogPhoto.append(image);
-    }
+  // 이전에 재생 중이던 게 있으면 멈춰서, 리셋되는 UI 상태(재생 안 함)와 실제 재생 상태를 맞춘다.
+  spotifyPlayer?.pause().catch(() => {});
+  spotifyPlaybackStarted = false;
+  currentTrackIndex = 0;
+  setPlayerPlaying(false);
+
+  const date = activePlayerDate || todayKstDate();
+  if (playerDate) playerDate.textContent = formatDisplayDate(date);
+  if (playerTitle) playerTitle.textContent = "";
+
+  const userId = await currentUserId();
+  if (userId) {
+    const { data: playlistRow } = await sb
+      .from("playlists")
+      .select("title")
+      .eq("user_id", userId)
+      .eq("playlist_date", date)
+      .maybeSingle();
+    if (playerTitle) playerTitle.textContent = playlistRow?.title || "제목 없는 플리";
   }
-  renderPlayerTracks();
+
+  await renderPlayerTracks(date);
 }
 
-async function renderPlayerTracks() {
-  if (!sb) return;
-  const { data: sessionData } = await sb.auth.getSession();
-  const user = sessionData.session?.user;
-  if (!user) return;
-  const date = todayKstDate();
-  const { data: logs, error } = await sb
+async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
+  currentTrackUris = [];
+  const userId = await currentUserId();
+  if (!userId) return;
+  const { data: logRows, error } = await sb
     .from("daily_logs")
-    .select("id, caption, photo_path, tracks(title, artists)")
-    .eq("user_id", user.id)
+    .select("id, caption, photo_path, logged_at, tracks(title, artists, spotify_url)")
+    .eq("user_id", userId)
     .eq("log_date", date)
     .order("logged_at");
   if (error) {
     console.error("플레이어 트랙 로드 실패:", error.message);
     return;
   }
-  const dayLogs = logs || [];
+  const dayLogs = logRows || [];
 
   // 대표 로그 사진/캡션을 실제 저장 데이터로(새로고침해도 유지되게)
   const first = dayLogs[0];
+  if (playerLogPhoto) playerLogPhoto.replaceChildren();
+  if (playerLogPhoto) playerLogPhoto.classList.remove("has-photo");
+  if (playerLogCaption) playerLogCaption.textContent = first?.caption || "아직 이 노래와 연결된 로그가 없어요";
   if (first) {
-    if (playerLogCaption) playerLogCaption.textContent = first.caption || "오늘 하루를 기록했어요";
     if (playerLogPhoto) {
       const url = await signedUrl(first.photo_path);
       if (url) {
@@ -789,9 +1132,13 @@ async function renderPlayerTracks() {
   const list = document.querySelector("#playlist-player-screen .player-track-list");
   if (!list) return;
   list.querySelectorAll(".player-track").forEach((row) => row.remove());
+  currentTrackLogs = [];
   for (let index = 0; index < dayLogs.length; index += 1) {
     const log = dayLogs[index];
     const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
+
+    const trackId = trackIdFromSpotifyUrl(track?.spotify_url);
+    if (trackId) currentTrackUris.push(`spotify:track:${trackId}`);
 
     const button = document.createElement("button");
     button.className = "player-track";
@@ -806,6 +1153,12 @@ async function renderPlayerTracks() {
       thumb.style.backgroundSize = "cover";
       thumb.style.backgroundPosition = "center";
     }
+    currentTrackLogs[index] = {
+      caption: log.caption,
+      photo: photoUrl,
+      date: formatDisplayDate(date),
+      time: formatDisplayTime(log.logged_at),
+    };
 
     const strong = document.createElement("strong");
     const title = track?.title || "추천 곡 준비중";
@@ -818,12 +1171,27 @@ async function renderPlayerTracks() {
 }
 
 function getTrackLog(index) {
-  return logs[index] || {
-    caption: "아직 이 노래와 연결된 로그가 없어요",
-    photo: "",
-    date: formatToday(),
-    time: "16:00",
-  };
+  return (
+    currentTrackLogs[index] ||
+    logs[index] || {
+      caption: "아직 이 노래와 연결된 로그가 없어요",
+      photo: "",
+      date: formatToday(),
+      time: "16:00",
+    }
+  );
+}
+
+function formatDisplayTime(isoTimestamp) {
+  if (!isoTimestamp) return "16:00";
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(isoTimestamp));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.hour}:${values.minute}`;
 }
 
 function renderTrackLogStaff(notes = []) {
@@ -922,7 +1290,8 @@ function showScreen(index) {
     resetEmotionStaff();
   }
   if (currentScreen === "archive-screen") {
-    renderArchiveShelves();
+    updateArchiveYearLabel();
+    refreshArchiveShelves();
     scrollArchiveToCurrentMonth();
   }
   if (currentScreen === "archive-month-screen") {
@@ -999,11 +1368,9 @@ function renderEmotionStaff(noteSources = selectedMoodNotes) {
     note.style.top = `${position.top}px`;
     emotionStaff.append(note);
   });
-  staffNoteCount = noteSources.length;
 }
 
 function resetEmotionStaff() {
-  staffNoteCount = 0;
   selectedMoodNotes = [];
   emotionStaff?.querySelectorAll(".staff-note").forEach((note) => note.remove());
   for (const item of document.querySelectorAll(".emotion-choice")) {
@@ -1085,12 +1452,58 @@ function makePolaroid({ index, add = false, log = null }) {
   return card;
 }
 
+async function finalizeTodayPlaylist() {
+  // "플레이리스트 만들기" 완료 버튼: 입력한 제목/소개를 오늘 playlists 행에 저장.
+  hasTodayPlaylist = true;
+  updateTodayPlaylistButton();
+  const userId = await currentUserId();
+  if (userId) {
+    const title = playlistTitleInput?.value.trim() || "제목 없는 플리";
+    const description = playlistIntroInput?.value.trim() || null;
+    const { error } = await sb
+      .from("playlists")
+      .update({ title, description })
+      .eq("user_id", userId)
+      .eq("playlist_date", todayKstDate());
+    if (error) console.error("플리 제목 저장 실패:", error.message);
+  }
+  showScreen(screens.indexOf("playlist-complete-screen"));
+}
+
 function updateTodayPlaylistButton() {
   if (!playlistButton) return;
   playlistButton.textContent = hasTodayPlaylist ? "오늘의 플리 들으러 가기" : "플레이리스트 만들기";
 }
 
-function renderPolaroids() {
+async function loadTodayLogsIntoLocalCache() {
+  // 새로고침/재로그인 등으로 세션이 새로 시작돼도 오늘 찍은 사진·캡션이 그대로 보이도록
+  // 로컬 캐시(logs)를 Supabase daily_logs로 채운다.
+  const userId = await currentUserId();
+  if (!userId) return;
+  const date = todayKstDate();
+  const { data, error } = await sb
+    .from("daily_logs")
+    .select("caption, photo_path, logged_at")
+    .eq("user_id", userId)
+    .eq("log_date", date)
+    .order("logged_at");
+  if (error) {
+    console.error("오늘의 기록 로드 실패:", error.message);
+    return;
+  }
+  logs.length = 0;
+  for (const row of data || []) {
+    logs.push({
+      caption: row.caption,
+      photo: await signedUrl(row.photo_path),
+      date: formatDisplayDate(date),
+      time: formatDisplayTime(row.logged_at),
+    });
+  }
+}
+
+async function renderPolaroids() {
+  await loadTodayLogsIntoLocalCache();
   polaroidList.replaceChildren();
   const board = document.createElement("div");
   board.className = "polaroid-board";
@@ -1158,6 +1571,13 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "prev-archive-year" || action === "next-archive-year") {
+    activeArchiveYear += action === "prev-archive-year" ? -1 : 1;
+    updateArchiveYearLabel();
+    refreshArchiveShelves();
+    return;
+  }
+
   if (action === "open-archive-month") {
     activeArchiveMonth = Number(target.dataset.month || target.closest(".archive-month")?.dataset.month || getCurrentMonthNumber());
     activeArchivePlaylistIndex = 0;
@@ -1173,6 +1593,8 @@ document.addEventListener("click", (event) => {
 
   if (action === "open-playlist-player") {
     playerEntryMode = target.dataset.playerEntry || "archive";
+    activePlayerDate =
+      playerEntryMode === "home" ? todayKstDate() : getActiveArchivePlaylistRow()?.playlist_date || todayKstDate();
     showScreen(screens.indexOf("playlist-player-screen"));
     return;
   }
@@ -1224,7 +1646,6 @@ document.addEventListener("click", (event) => {
       time: formatCurrentTime(),
       moodNotes: [...selectedMoodNotes],
     });
-    logCount = logs.length;
     pendingNote = "";
     capturedPhotoDataUrl = "";
     recordNoteInput.value = "";
@@ -1233,10 +1654,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "complete-playlist") {
-    addPlaylistToArchive();
-    hasTodayPlaylist = true;
-    updateTodayPlaylistButton();
-    showScreen(screens.indexOf("playlist-complete-screen"));
+    finalizeTodayPlaylist();
     return;
   }
 
@@ -1245,9 +1663,15 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  if (action === "logout") {
+    logout();
+    return;
+  }
+
   if (target.id === "playlist-button") {
     if (hasTodayPlaylist) {
       playerEntryMode = "home";
+      activePlayerDate = todayKstDate();
       showScreen(screens.indexOf("playlist-player-screen"));
     } else {
       generatePlaylist();
@@ -1256,12 +1680,42 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "toggle-player-play") {
-    setPlayerPlaying(!isPlayerPlaying);
+    console.log(
+      `[재생버튼] spotifyDeviceId=${spotifyDeviceId} currentTrackUris.length=${currentTrackUris.length} spotifyPlaybackStarted=${spotifyPlaybackStarted} isPlayerPlaying=${isPlayerPlaying}`,
+    );
+    if (spotifyDeviceId && currentTrackUris.length) {
+      // 실제 Spotify 응답(player_state_changed)을 기다리지 않고 우선 눈에 보이는 반응부터 준다.
+      // 이후 상태가 다르면 player_state_changed 리스너가 다시 맞춰준다.
+      setPlayerPlaying(!isPlayerPlaying);
+      if (!spotifyPlaybackStarted) {
+        spotifyPlaybackStarted = true;
+        playSpotifyTrackAt(currentTrackIndex);
+      } else {
+        spotifyPlayer?.togglePlay().catch((err) => console.error("togglePlay 실패:", err));
+      }
+    } else {
+      // Spotify 재생 준비가 안 된 경우(익명 로그인/토큰 만료/트랙 없음 등)엔 LP 애니메이션만 토글.
+      setPlayerPlaying(!isPlayerPlaying);
+    }
+    return;
+  }
+
+  if (action === "player-prev" || action === "player-next") {
+    if (!currentTrackUris.length) return;
+    const delta = action === "player-prev" ? -1 : 1;
+    currentTrackIndex = (currentTrackIndex + delta + currentTrackUris.length) % currentTrackUris.length;
+    console.log(`[${action}] spotifyDeviceId=${spotifyDeviceId} newIndex=${currentTrackIndex}`);
+    if (spotifyDeviceId) {
+      spotifyPlaybackStarted = true;
+      setPlayerPlaying(true);
+      playSpotifyTrackAt(currentTrackIndex);
+    }
     return;
   }
 
   if (action === "player-nav") {
     setPlayerPlaying(false);
+    spotifyPlayer?.pause();
     showScreen(screens.indexOf(playerEntryMode === "home" ? "record-home-screen" : "archive-playlist-detail-screen"));
     return;
   }

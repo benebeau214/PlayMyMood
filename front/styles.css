@@ -1366,6 +1366,20 @@ h1 {
 
 .record-home-screen.active { display: block; }
 
+.logout-button {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 5;
+  padding: 6px 13px;
+  border: 1px solid #0b0b0b;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #0b0b0b;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
 .desk-scene {
   position: absolute;
   inset: 0;
@@ -2266,12 +2280,21 @@ h1 {
 
 .archive-shelf {
   position: relative;
+  display: block;
+  width: 100%;
   height: 166px;
+  margin: 0;
+  padding: 0;
   background: #7b4d36;
   border-left: 13px solid #6c3f2c;
   border-right: 13px solid #6c3f2c;
   border-top: 10px solid #6c3f2c;
+  border-bottom: 0;
   overflow: hidden;
+  font: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .archive-shelf::before {
@@ -2316,42 +2339,33 @@ h1 {
   display: none;
 }
 
-/* CSS-drawn archived LPs */
+/* CSS-drawn archived LPs: 왼쪽에서 오른쪽으로 직립 상태로 쌓인다.
+   레코드 한 장 = 순수 단색 판. 안에 선/하이라이트 없이 깔끔하게. */
 .archive-lp {
   position: absolute;
   bottom: 30px;
-  width: 22px;
+  left: 0;
+  width: 13px;
   height: 128px;
-  background: #f8f1c6;
-  box-shadow: inset 5px 0 #ff4d00, inset 11px 0 #fff, inset 16px 0 #8b241a;
+  transform-origin: bottom left;
+  background: #ff6a1a;
 }
 
-.archive-lp::before,
-.archive-lp::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-}
+.archive-lp-color-1 { background: #ff6a1a; }
+.archive-lp-color-2 { background: #f6f1d9; }
+.archive-lp-color-3 { background: #7e2a1d; }
+.archive-lp-color-4 { background: #cfe6f5; }
+.archive-lp-color-5 { background: #2e5136; }
+.archive-lp-color-6 { background: #f2dd8c; }
 
-.archive-lp::before {
-  left: 5px;
-  width: 5px;
-  background: #dcecf8;
+/* 그 달의 가장 마지막(최신) LP: 똑바로 선 나머지와 달리 옆으로 기대어 표시.
+   피벗은 반드시 bottom left — bottom right로 하면 반대쪽 아래 모서리가 선반 바닥 아래로
+   처져서 책장을 벗어나 보인다. 겹침(왼쪽으로 살짝 당기는 정도)은 JS의 left 값에서
+   계산하므로 여기서는 회전만 담당한다. */
+.archive-lp-last {
+  transform: rotate(-18deg);
+  z-index: 1;
 }
-
-.archive-lp::after {
-  right: 0;
-  width: 6px;
-  background: #2e5136;
-}
-
-.archive-lp-1 { transform: rotate(0deg); }
-.archive-lp-2 { transform: rotate(-10deg); background: #fdf6df; box-shadow: inset 5px 0 #ff4d00, inset 11px 0 #dcecf8, inset 17px 0 #7e251d; }
-.archive-lp-3 { transform: rotate(-7deg); background: #fff7db; box-shadow: inset 4px 0 #ff4d00, inset 10px 0 #ef8150, inset 17px 0 #fff; }
-.archive-lp-4 { transform: rotate(12deg); background: #376a43; box-shadow: inset 8px 0 #376a43, inset 14px 0 #ed585d, inset 19px 0 #7e251d; }
-.archive-lp-5 { transform: rotate(8deg); background: #ff4d00; box-shadow: inset 5px 0 #7e251d, inset 12px 0 #ff4d00, inset 18px 0 #dcecf8; }
-.archive-lp-6 { transform: rotate(0deg); background: #f7e9b8; box-shadow: inset 5px 0 #8b241a, inset 11px 0 #fff, inset 17px 0 #bdd6e8; }
 
 /* Archive month carousel and playlist detail */
 .archive-month-screen,
@@ -2370,7 +2384,6 @@ h1 {
 .archive-month-copy h1,
 .archive-detail-name { margin: 0; color: #111; font-size: 1.18rem; font-weight: 700; }
 .archive-month-copy p { margin: 17px 0 0; color: #444; font-size: 0.95rem; line-height: 1.35; }
-.archive-month-button { width: 100%; height: 100%; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .archive-detail-date { position: absolute; left: 0; right: 0; top: 180px; margin: 0; color: #666; text-align: center; font-size: 1rem; }
 .archive-detail-cover { position: absolute; left: 88px; top: 211px; width: 245px; height: 166px; border: 0; background: transparent; cursor: pointer; }
 .archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: #ff6b00; }
@@ -3578,5 +3591,30 @@ h1 {
   height: 150px;
   z-index: 7;
   background-size: contain;
+}
+
+/* 트랙이 여러 곡일 때 목록 영역 안에서만 스크롤되게 (하단 고정 버튼과 안 겹치도록) */
+.playlist-list {
+  bottom: 120px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.archive-detail-tracks {
+  bottom: 130px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.playlist-player-screen .player-track-list {
+  bottom: 130px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.playlist-list::-webkit-scrollbar,
+.archive-detail-tracks::-webkit-scrollbar,
+.playlist-player-screen .player-track-list::-webkit-scrollbar {
+  display: none;
 }
 
