@@ -17,8 +17,7 @@ const screens = [
   "era-screen",
   "genre-screen",
   "hit-screen",
-  "cover-screen",
-  "finish-screen",
+  "welcome-screen",
   "record-home-screen",
   "archive-screen",
   "archive-month-screen",
@@ -346,11 +345,6 @@ function readFamePreference() {
   return Math.round(value) / 100; // 0.00 ~ 1.00
 }
 
-function readSelectedCoverIndex() {
-  const cards = Array.from(document.querySelectorAll("#cover-screen .blank-card"));
-  return cards.findIndex((card) => card.classList.contains("selected"));
-}
-
 async function saveOnboarding() {
   if (!sb) return;
   const { data: sessionData } = await sb.auth.getSession();
@@ -360,24 +354,12 @@ async function saveOnboarding() {
     return;
   }
 
-  const coverIndex = readSelectedCoverIndex();
-  let coverStyleId = null;
-  if (coverIndex >= 0) {
-    const { data: coverStyle } = await sb
-      .from("cover_styles")
-      .select("id")
-      .eq("code", `style_${coverIndex + 1}`)
-      .maybeSingle();
-    coverStyleId = coverStyle?.id ?? null;
-  }
-
   const { error: prefError } = await sb.from("user_preferences").upsert(
     {
       user_id: user.id,
       era: readSelectedEra(),
       genres: readSelectedGenres(),
       fame_preference: readFamePreference(),
-      cover_style_id: coverStyleId,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
@@ -1332,11 +1314,6 @@ function showScreen(index) {
   }
 
   const currentScreen = screens[currentIndex];
-  if (currentScreen === "finish-screen") {
-    completeTimer = setTimeout(() => {
-      showScreen(screens.indexOf("record-home-screen"));
-    }, 3000);
-  }
   if (currentScreen === "capture-screen") {
     startCamera();
   } else {

@@ -18,7 +18,8 @@ RECCOBEATS_BASE_URL = "https://api.reccobeats.com"
 PREFERRED_COUNTRIES = ("KR", "US")
 HTTP_USER_AGENT = "Mozilla/5.0 (compatible; MoodMusicAgent/0.1; +https://reccobeats.com)"
 RECCOBEATS_TARGET_KEYS = ("valence", "danceability", "energy", "tempo", "popularity")
-PREFERENCE_KEYS = ("preferred_genres", "avoid_genres", "preferred_artists", "avoid_artists")
+LIST_PREFERENCE_KEYS = ("preferred_genres", "avoid_genres", "preferred_artists", "avoid_artists")
+ERA_VALUES = ("2020s", "2010s", "2000s", "pre_2000s")
 
 
 class ConfigurationError(RuntimeError):
@@ -65,14 +66,14 @@ def parse_emotion_args(raw_emotions: list[str]) -> dict[str, float]:
     return emotions
 
 
-def normalize_preferences(raw_preferences: Any) -> dict[str, list[str]]:
+def normalize_preferences(raw_preferences: Any) -> dict[str, Any]:
     if not raw_preferences:
         return {}
     if not isinstance(raw_preferences, dict):
         raise ValueError("preferences must be a JSON object")
 
-    preferences: dict[str, list[str]] = {}
-    for key in PREFERENCE_KEYS:
+    preferences: dict[str, Any] = {}
+    for key in LIST_PREFERENCE_KEYS:
         raw_value = raw_preferences.get(key)
         if raw_value is None:
             continue
@@ -85,6 +86,14 @@ def normalize_preferences(raw_preferences: Any) -> dict[str, list[str]]:
         cleaned = [value for value in values if value]
         if cleaned:
             preferences[key] = cleaned
+
+    preferred_era = str(raw_preferences.get("preferred_era") or "").strip()
+    if preferred_era in ERA_VALUES:
+        preferences["preferred_era"] = preferred_era
+
+    obscurity = raw_preferences.get("obscurity_preference")
+    if isinstance(obscurity, int | float):
+        preferences["obscurity_preference"] = round(_clamp(float(obscurity), 0.0, 1.0), 3)
     return preferences
 
 
@@ -237,6 +246,8 @@ class AnthropicMoodClient:
                         "If emotion scores are empty, infer the emotional direction from the situation text.\n"
                         "Use preferred_genres and preferred_artists to choose seed artists/tracks when musically appropriate. "
                         "Do not choose seed artists or tracks from avoid_artists. Avoid avoid_genres in the seed direction. "
+                        "Use preferred_era to favor seed tracks released in that period. "
+                        "obscurity_preference ranges from 0 (popular hits) to 1 (hidden gems); use it when choosing seeds. "
                         "If preferences conflict with the situation, prioritize the situation and explain the tradeoff briefly in reasoning_for_user.\n"
                         "Return JSON with keys: mood_label, listening_intent, "
                         "target_audio_features, seed_artists, seed_tracks, reasoning_for_user. "
@@ -440,6 +451,19 @@ def complete_target_features(
         else:
             complete[key] = fallback[key]
     return complete
+
+
+def apply_preference_targets(
+    target_features: dict[str, float],
+    preferences: dict[str, Any] | None,
+) -> dict[str, float]:
+    adjusted = dict(target_features)
+    normalized = normalize_preferences(preferences or {})
+    obscurity = normalized.get("obscurity_preference")
+    if isinstance(obscurity, int | float):
+        # 온보딩 슬라이더: 0=인기곡, 1=숨은 명곡.
+        adjusted["popularity"] = round(85.0 - (float(obscurity) * 60.0), 1)
+    return adjusted
 
 
 def derive_target_features_from_emotions(emotions: dict[str, float]) -> dict[str, float]:
@@ -697,12 +721,18 @@ def dedupe_tracks(tracks: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def track_reliability_score(
     track: dict[str, Any],
     target_features: dict[str, float],
-    preferences: dict[str, list[str]] | None = None,
+    preferences: dict[str, Any] | None = None,
 ) -> float:
     preferences = normalize_preferences(preferences or {})
     availability_bonus = 0.2 if track.get("available_in_preferred_country") else 0.0
     fit_score = 1.0 - feature_distance(track, target_features)
-    popularity_score = min(float(track.get("popularity") or 0) / 100.0, 1.0)
+    popularity = min(float(track.get("popularity") or 0) / 100.0, 1.0)
+    obscurity = preferences.get("obscurity_preference")
+    popularity_score = (
+        ((1.0 - float(obscurity)) * popularity) + (float(obscurity) * (1.0 - popularity))
+        if isinstance(obscurity, int | float)
+        else popularity
+    )
     preferred_artist_bonus = 0.12 if _artist_matches(track, preferences.get("preferred_artists", [])) else 0.0
     return (fit_score * 0.65) + (popularity_score * 0.15) + availability_bonus + preferred_artist_bonus
 
@@ -710,7 +740,7 @@ def track_reliability_score(
 def rank_tracks(
     tracks: list[dict[str, Any]],
     target_features: dict[str, float] | None = None,
-    preferences: dict[str, list[str]] | None = None,
+    preferences: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     target_features = target_features or {}
     return sorted(
@@ -728,7 +758,7 @@ def recommend_music(
     emotions: dict[str, float],
     limit: int = 10,
     *,
-    preferences: dict[str, list[str]] | None = None,
+    preferences: dict[str, Any] | None = None,
     claude_client: Any | None = None,
     recco_client: Any | None = None,
 ) -> dict[str, Any]:
@@ -740,6 +770,7 @@ def recommend_music(
 
     profile = build_mood_profile(situation, emotions, claude, preferences)
     target_features = complete_target_features(profile, emotions)
+    target_features = apply_preference_targets(target_features, preferences)
     profile["target_audio_features"] = target_features
     seeds = resolve_seed_track_ids(profile, recco, warnings)
     if not seeds:
