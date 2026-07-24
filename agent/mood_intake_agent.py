@@ -99,23 +99,45 @@ class EmotionLog:
     emoji: str = ""
     image_path: str | None = None
     created_at: str | None = None
+    emojis: tuple[str, ...] = ()
+
+
+def selected_emotion_labels(log: EmotionLog) -> tuple[str, ...]:
+    candidates = log.emojis or ((log.emoji,) if log.emoji else ())
+    return tuple(dict.fromkeys(
+        label for label in candidates if label in CUSTOM_EMOTION_LABELS
+    ))
+
+
+def combined_emotion_prior(labels: str | tuple[str, ...] | list[str]) -> dict[str, float]:
+    if isinstance(labels, str):
+        labels = [labels] if labels else []
+    prior: dict[str, float] = {}
+    for label in labels:
+        for key, value in CUSTOM_EMOTION_PRIORS.get(label, {}).items():
+            prior[key] = max(prior.get(key, 0.0), clamp01(value))
+    return prior
 
 
 def clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def normalize_emotions(raw: Any, emoji_label: str = "") -> dict[str, float]:
+def normalize_emotions(
+    raw: Any,
+    emotion_labels: str | tuple[str, ...] | list[str] = (),
+) -> dict[str, float]:
     if not isinstance(raw, dict):
         raw = {}
-    prior = CUSTOM_EMOTION_PRIORS.get(emoji_label, {})
+    prior = combined_emotion_prior(emotion_labels)
     normalized: dict[str, float] = {}
     for key in EMOTION_KEYS:
-        value = raw.get(key, prior.get(key, 0.0))
+        prior_value = prior.get(key, 0.0)
+        value = raw.get(key, prior_value)
         if isinstance(value, int | float):
-            normalized[key] = round(clamp01(float(value)), 3)
+            normalized[key] = round(max(clamp01(float(value)), prior_value), 3)
         else:
-            normalized[key] = 0.0
+            normalized[key] = round(prior_value, 3)
     return normalized
 
 
@@ -138,18 +160,29 @@ def parse_logs_text(text: str) -> list[EmotionLog]:
     for index, item in enumerate(raw):
         if not isinstance(item, dict):
             raise ValueError(f"log at index {index} must be an object")
-        emoji = str(item.get("emoji") or item.get("emotion_label") or "").strip()
-        if emoji and emoji not in CUSTOM_EMOTION_LABELS:
+        raw_emojis = item.get("emojis") or item.get("emotion_labels")
+        if raw_emojis is None:
+            raw_emojis = [item.get("emoji") or item.get("emotion_label") or ""]
+        if not isinstance(raw_emojis, list):
+            raise ValueError(f"log at index {index} emojis/emotion_labels must be a list")
+        emojis = tuple(dict.fromkeys(
+            str(value).strip()
+            for value in raw_emojis
+            if value is not None and str(value).strip()
+        ))
+        unsupported = [emoji for emoji in emojis if emoji not in CUSTOM_EMOTION_LABELS]
+        if unsupported:
             raise ValueError(
-                f"log at index {index} has unsupported emoji/emotion label: {emoji}. "
+                f"log at index {index} has unsupported emoji/emotion label: {unsupported[0]}. "
                 f"Allowed labels: {', '.join(CUSTOM_EMOTION_LABELS)}"
             )
         logs.append(
             EmotionLog(
                 caption=str(item.get("caption") or item.get("message") or ""),
-                emoji=emoji,
+                emoji=emojis[0] if emojis else "",
                 image_path=item.get("image_path"),
                 created_at=item.get("created_at"),
+                emojis=emojis,
             )
         )
     if not logs:
@@ -240,18 +273,19 @@ def build_analysis_prompt(logs: list[EmotionLog]) -> str:
             "log_index": index,
             "created_at": log.created_at,
             "caption": log.caption,
-            "selected_emotion_label": log.emoji,
+            "selected_emotion_labels": list(selected_emotion_labels(log)),
             "has_image": bool(log.image_path),
         }
         for index, log in enumerate(logs, start=1)
     ]
     return (
         "Analyze each emotion log independently and produce one song-mapping payload per log.\n"
-        f"Allowed selected_emotion_label values: {', '.join(CUSTOM_EMOTION_LABELS)}.\n"
+        f"Allowed selected_emotion_labels values: {', '.join(CUSTOM_EMOTION_LABELS)}.\n"
         f"Logs JSON: {json.dumps(compact_logs, ensure_ascii=False, sort_keys=True)}\n\n"
         "Rules:\n"
         "- Do not summarize the whole day into one mood. Each log gets its own analysis and one music_agent_input.\n"
-        "- The user's selected_emotion_label is strong evidence, but captions and images may refine intensity.\n"
+        "- Every value in the user's selected_emotion_labels is strong evidence. Blend all selected emotions; "
+        "do not discard any of them, though captions and images may refine intensity.\n"
         "- Images must be used for situation and atmosphere only: visible place, objects, lighting, color, weather, activity, and mood.\n"
         "- Do not infer private identity, sensitive traits, or exact mental-health conditions from images.\n"
         "- emotions must contain exactly these keys with values from 0.0 to 1.0: "
@@ -263,7 +297,7 @@ def build_analysis_prompt(logs: list[EmotionLog]) -> str:
         "\"log_results\":["
         "{"
         "\"log_index\":1,"
-        "\"selected_emotion_label\":\"행복한\","
+        "\"selected_emotion_labels\":[\"행복한\",\"설레는\"],"
         "\"mood_label\":\"short Korean mood label\","
         "\"situation\":\"Korean sentence for this log\","
         "\"image_context\":\"Korean visible situation/atmosphere summary, empty string if no image\","
@@ -279,11 +313,12 @@ def build_analysis_prompt(logs: list[EmotionLog]) -> str:
 
 def fallback_emotions_for_log(log: EmotionLog) -> dict[str, float]:
     scores = {key: 0.0 for key in EMOTION_KEYS}
-    for key, value in CUSTOM_EMOTION_PRIORS.get(log.emoji, {}).items():
+    labels = selected_emotion_labels(log)
+    for key, value in combined_emotion_prior(labels).items():
         if key in scores:
             scores[key] = max(scores[key], clamp01(value))
 
-    text = f"{log.caption} {log.emoji}".lower()
+    text = f"{log.caption} {' '.join(labels)}".lower()
     cues = {
         "joy": ("좋", "행복", "웃", "기쁜", "만족"),
         "sadness": ("슬", "우울", "눈물", "힘들", "속상"),
@@ -331,12 +366,20 @@ def normalize_cover_input(raw: Any, mood_label: str) -> dict[str, Any]:
 def normalize_log_result(raw: Any, log: EmotionLog, expected_index: int) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raw = {}
-    selected_label = normalize_text(raw.get("selected_emotion_label"), log.emoji)
-    if selected_label not in CUSTOM_EMOTION_LABELS:
-        selected_label = log.emoji if log.emoji in CUSTOM_EMOTION_LABELS else ""
+    selected_labels = selected_emotion_labels(log)
+    if not selected_labels:
+        raw_labels = raw.get("selected_emotion_labels")
+        if not isinstance(raw_labels, list):
+            raw_labels = [raw.get("selected_emotion_label")]
+        selected_labels = tuple(dict.fromkeys(
+            str(label).strip()
+            for label in raw_labels
+            if str(label or "").strip() in CUSTOM_EMOTION_LABELS
+        ))
+    selected_label = selected_labels[0] if selected_labels else ""
 
     fallback_emotions = fallback_emotions_for_log(log)
-    emotions = normalize_emotions(raw.get("emotions") or fallback_emotions, selected_label)
+    emotions = normalize_emotions(raw.get("emotions") or fallback_emotions, selected_labels)
     if not any(emotions.values()):
         emotions = fallback_emotions
 
@@ -349,7 +392,7 @@ def normalize_log_result(raw: Any, log: EmotionLog, expected_index: int) -> dict
     if not isinstance(music_input, dict):
         music_input = {}
     music_situation = normalize_text(music_input.get("situation"), situation)
-    music_emotions = normalize_emotions(music_input.get("emotions") or emotions, selected_label)
+    music_emotions = normalize_emotions(music_input.get("emotions") or emotions, selected_labels)
     if not any(music_emotions.values()):
         music_emotions = emotions
 
@@ -365,6 +408,7 @@ def normalize_log_result(raw: Any, log: EmotionLog, expected_index: int) -> dict
         "created_at": log.created_at,
         "caption": log.caption,
         "selected_emotion_label": selected_label,
+        "selected_emotion_labels": list(selected_labels),
         "mood_label": mood_label,
         "situation": situation,
         "image_context": image_context,
