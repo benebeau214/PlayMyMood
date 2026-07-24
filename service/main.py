@@ -84,13 +84,13 @@ def _download_photo(photo_path: str) -> str | None:
 
 def _run_intake(log: dict[str, Any], image_path: str | None) -> dict[str, Any]:
     """mood_intake_agent로 situation/image_context/emotion_scores/mood_label 산출."""
-    emotions = log.get("emotions") or []
-    emoji = emotions[0] if emotions else ""
+    emotions = tuple(dict.fromkeys(log.get("emotions") or []))
     emotion_log = EmotionLog(
         caption=log.get("caption") or "",
-        emoji=emoji,
+        emoji=emotions[0] if emotions else "",
         image_path=image_path,
         created_at=log.get("logged_at"),
+        emojis=emotions,
     )
     analysis = analyze_daily_logs([emotion_log])
     result = analysis["log_results"][0]
