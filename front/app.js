@@ -44,6 +44,7 @@ let activeMonthPlaylists = [];
 let activeArchiveMonth = getCurrentMonthNumber();
 let activeArchiveYear = getCurrentYearNumber();
 let activeArchivePlaylistIndex = 0;
+let archiveCarouselFrame = null;
 let activePlayerDate = null;
 let pendingNote = "";
 let completeTimer = null;
@@ -101,6 +102,7 @@ let cameraStream = null;
 let cameraFacingMode = "environment";
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
+let isRetakingPhoto = false;
 const MAX_EMOTION_SELECTIONS = 9;
 let selectedMoodNotes = [];
 
@@ -403,15 +405,42 @@ const EMOTION_VALUES = [
   "속상한", "허무한", "피곤한", "짜증난", "화난", "불안한", "괴로운",
 ];
 
+const EMOTION_NOTE_ASSETS = {
+  "기쁜": "./assets/emotion-joy.png",
+  "신나는": "./assets/emotion-excited.png",
+  "행복한": "./assets/emotion-happy.png",
+  "설레는": "./assets/emotion-flutter.png",
+  "뿌듯한": "./assets/emotion-proud.png",
+  "감동한": "./assets/emotion-touched.png",
+  "편안한": "./assets/emotion-comfortable.png",
+  "짜릿한": "./assets/emotion-relieved.png",
+  "만족한": "./assets/emotion-satisfied.png",
+  "화난": "./assets/emotion-angry.png",
+  "짜증난": "./assets/emotion-annoyed.png",
+  "우울한": "./assets/emotion-depressed.png",
+  "불안한": "./assets/emotion-anxious.png",
+  "괴로운": "./assets/emotion-distressed.png",
+  "피곤한": "./assets/emotion-tired.png",
+  "속상한": "./assets/emotion-hurt.png",
+};
+
+function emotionNoteSources(emotions = []) {
+  if (!Array.isArray(emotions)) return [];
+  return emotions
+    .map((emotion) => EMOTION_NOTE_ASSETS[emotion])
+    .filter(Boolean)
+    .slice(0, MAX_EMOTION_SELECTIONS);
+}
+
 function readSelectedEmotions() {
   const buttons = Array.from(document.querySelectorAll("#emotion-screen .emotion-choice.selected"));
   const labels = buttons
-    .map((button) => button.querySelector("span")?.textContent?.trim())
+    .map((button) => button.dataset.emotion || button.querySelector("span")?.textContent?.trim())
     .filter((label) => EMOTION_VALUES.includes(label));
   const unique = [...new Set(labels)].slice(0, MAX_EMOTION_SELECTIONS);
   if (unique.length === 0) {
     // 감정 버튼이 아직 플레이스홀더("기쁨" 등)라 유효한 라벨이 없으면 테스트용 기본값으로 저장.
-    // index.html의 emotion-choice <span>을 실제 감정(행복한/신나는/…)으로 채우면 그대로 저장됨.
+    // 화면용 명사 라벨과 DB enum 값이 다르므로 data-emotion 값을 우선 저장한다.
     console.warn("유효한 감정 라벨 없음 → 기본값 ['기쁜']으로 저장 (감정 버튼 라벨을 실제 값으로 채워야 함)");
     return ["기쁜"];
   }
@@ -567,7 +596,7 @@ async function renderPlaylistEdit(userId, date = todayKstDate()) {
 
   const { data: logRows, error } = await sb
     .from("daily_logs")
-    .select("id, caption, photo_path, sticker_path, logged_at, tracks(title, artists)")
+    .select("id, caption, photo_path, sticker_path, logged_at, emotions, tracks(title, artists)")
     .eq("user_id", userId)
     .eq("log_date", date)
     .order("logged_at");
@@ -605,6 +634,7 @@ async function renderPlaylistEdit(userId, date = todayKstDate()) {
         photo: photoUrl,
         date: formatDisplayDate(date),
         time: formatDisplayTime(log.logged_at),
+        moodNotes: emotionNoteSources(log.emotions),
       };
 
       const info = document.createElement("span");
@@ -810,9 +840,13 @@ function capturePhoto() {
   if (flashEnabled) flashPreview();
   const captured = captureCurrentFrame();
   if (!captured) return;
-  showScreen(screens.indexOf("note-screen"));
-  requestAnimationFrame(updateCapturedPhotoPreview);
-  recordNoteInput?.focus();
+  const returnToEmotion = isRetakingPhoto;
+  isRetakingPhoto = false;
+  showScreen(screens.indexOf(returnToEmotion ? "emotion-screen" : "note-screen"));
+  if (!returnToEmotion) {
+    requestAnimationFrame(updateCapturedPhotoPreview);
+    recordNoteInput?.focus();
+  }
 }
 function updateEmotionPreview() {
   if (emotionPhotoPreview) {
@@ -915,6 +949,40 @@ function formatArchiveMonth(month) {
   return `${year}.${String(month).padStart(2, "0")}`;
 }
 
+function selectArchivePlaylist(index) {
+  if (!activeMonthPlaylists.length) return;
+  const nextIndex = Math.max(0, Math.min(index, activeMonthPlaylists.length - 1));
+  const playlist = activeMonthPlaylists[nextIndex];
+  activeArchivePlaylistIndex = nextIndex;
+  if (archiveMonthPlaylistTitle) {
+    archiveMonthPlaylistTitle.textContent = playlist.title || "제목 없는 플리";
+  }
+  if (archiveMonthPlaylistDesc) {
+    archiveMonthPlaylistDesc.textContent = playlist.description || "짧은 소개글이 아직 없어요.";
+  }
+  archiveMonthCarousel?.querySelectorAll(".archive-album-card").forEach((card, cardIndex) => {
+    card.setAttribute("aria-current", cardIndex === nextIndex ? "true" : "false");
+  });
+}
+
+function syncArchivePlaylistToCarousel() {
+  if (!archiveMonthCarousel || !activeMonthPlaylists.length) return;
+  const cards = Array.from(archiveMonthCarousel.querySelectorAll(".archive-album-card"));
+  if (!cards.length) return;
+  const carouselCenter = archiveMonthCarousel.scrollLeft + archiveMonthCarousel.clientWidth / 2;
+  let closestIndex = 0;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  cards.forEach((card, index) => {
+    const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+    const distance = Math.abs(cardCenter - carouselCenter);
+    if (distance < closestDistance) {
+      closestIndex = index;
+      closestDistance = distance;
+    }
+  });
+  selectArchivePlaylist(closestIndex);
+}
+
 async function firstStickerUrlForDate(userId, date) {
   const { data, error } = await sb
     .from("daily_logs")
@@ -976,9 +1044,7 @@ async function renderArchiveMonthView(month = activeArchiveMonth) {
     archiveMonthCarousel?.append(card);
   });
 
-  const first = activeMonthPlaylists[0];
-  if (archiveMonthPlaylistTitle) archiveMonthPlaylistTitle.textContent = first.title || "제목 없는 플리";
-  if (archiveMonthPlaylistDesc) archiveMonthPlaylistDesc.textContent = first.description || "짧은 소개글이 아직 없어요.";
+  selectArchivePlaylist(0);
   requestAnimationFrame(() => {
     archiveMonthCarousel?.scrollTo({ left: 0, behavior: "auto" });
   });
@@ -1099,7 +1165,7 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
   if (!userId) return;
   const { data: logRows, error } = await sb
     .from("daily_logs")
-    .select("id, caption, photo_path, logged_at, tracks(title, artists, spotify_url)")
+    .select("id, caption, photo_path, logged_at, emotions, tracks(title, artists, spotify_url)")
     .eq("user_id", userId)
     .eq("log_date", date)
     .order("logged_at");
@@ -1158,6 +1224,7 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
       photo: photoUrl,
       date: formatDisplayDate(date),
       time: formatDisplayTime(log.logged_at),
+      moodNotes: emotionNoteSources(log.emotions),
     };
 
     const strong = document.createElement("strong");
@@ -1198,14 +1265,7 @@ function renderTrackLogStaff(notes = []) {
   const staff = document.querySelector(".track-log-staff");
   if (!staff) return;
   staff.querySelectorAll(".note").forEach((note) => note.remove());
-  const fallbackNotes = [
-    "./assets/music-note-orange.png",
-    "./assets/music-note-yellow.png",
-    "./assets/music-note-orange.png",
-    "./assets/music-note-yellow.png",
-  ];
-  const noteSources = notes.length ? notes : fallbackNotes;
-  noteSources.slice(0, MAX_EMOTION_SELECTIONS).forEach((src, index) => {
+  notes.slice(0, MAX_EMOTION_SELECTIONS).forEach((src, index) => {
     const position = getEmotionStaffPosition(index);
     const note = document.createElement("img");
     note.className = `note note-${index + 1}`;
@@ -1531,6 +1591,13 @@ recordNoteInput?.addEventListener("keydown", (event) => {
   showScreen(screens.indexOf("emotion-screen"));
 });
 
+archiveMonthCarousel?.addEventListener("scroll", () => {
+  if (archiveCarouselFrame !== null) cancelAnimationFrame(archiveCarouselFrame);
+  archiveCarouselFrame = requestAnimationFrame(() => {
+    archiveCarouselFrame = null;
+    syncArchivePlaylistToCarousel();
+  });
+});
 
 hitSlider?.addEventListener("input", updateHitSlider);
 zoomSlider?.addEventListener("input", applyZoom);
@@ -1616,6 +1683,12 @@ document.addEventListener("click", (event) => {
 
   if (action === "capture-photo") {
     capturePhoto();
+    return;
+  }
+
+  if (action === "retake-photo") {
+    isRetakingPhoto = true;
+    showScreen(screens.indexOf("capture-screen"));
     return;
   }
 
@@ -1722,6 +1795,11 @@ document.addEventListener("click", (event) => {
 
   if (action === "back") {
     const currentScreen = screens[currentIndex];
+    if (currentScreen === "capture-screen" && isRetakingPhoto) {
+      isRetakingPhoto = false;
+      showScreen(screens.indexOf("record-page-screen"));
+      return;
+    }
     if (currentScreen === "record-page-screen") {
       showScreen(screens.indexOf("record-home-screen"));
       return;
