@@ -295,6 +295,7 @@
 
         <article class="emotion-polaroid" aria-label="기록 미리보기">
           <div class="emotion-photo-preview"></div>
+          <button class="emotion-retake-button" type="button" data-action="retake-photo">다시 찍기</button>
           <p class="emotion-caption-preview"></p>
         </article>
 
@@ -308,18 +309,22 @@
         <section class="emotion-panel" aria-label="감정 고르기">
           <h1>지금의 감정은 어떠신가요?</h1>
           <div class="emotion-choice-grid" role="listbox" aria-multiselectable="true" aria-label="감정 선택">
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-yellow.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false"><img src="./assets/music-note-orange.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="기쁜"><img src="./assets/emotion-joy.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="신나는"><img src="./assets/emotion-excited.png" alt="" /><span>신남</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="행복한"><img src="./assets/emotion-happy.png" alt="" /><span>행복</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="설레는"><img src="./assets/emotion-flutter.png" alt="" /><span>설렘</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="뿌듯한"><img src="./assets/emotion-proud.png" alt="" /><span>뿌듯함</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="감동한"><img src="./assets/emotion-touched.png" alt="" /><span>감동</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="편안한"><img src="./assets/emotion-comfortable.png" alt="" /><span>평온</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜릿한"><img src="./assets/emotion-relieved.png" alt="" /><span>짜릿</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="만족한"><img src="./assets/emotion-satisfied.png" alt="" /><span>만족</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="화난"><img src="./assets/emotion-angry.png" alt="" /><span>화남</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜증난"><img src="./assets/emotion-annoyed.png" alt="" /><span>짜증</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="우울한"><img src="./assets/emotion-depressed.png" alt="" /><span>우울</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="불안한"><img src="./assets/emotion-anxious.png" alt="" /><span>불안</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="괴로운"><img src="./assets/emotion-distressed.png" alt="" /><span>괴로움</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="피곤한"><img src="./assets/emotion-tired.png" alt="" /><span>피곤</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="속상한"><img src="./assets/emotion-hurt.png" alt="" /><span>속상</span></button>
           </div>
         </section>
       </section>
