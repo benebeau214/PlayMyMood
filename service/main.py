@@ -38,6 +38,17 @@ load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 BUCKET = "playmymood"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+GENRE_LABELS = {
+    "kpop": "K-pop",
+    "pop": "Pop",
+    "edm": "EDM",
+    "rock": "Rock",
+    "jazz": "Jazz",
+    "trot": "Korean trot",
+    "rnb": "R&B",
+    "ballad": "Korean ballad",
+    "hiphop": "Hip-hop",
+}
 
 # 어떤 키가 로드됐는지 확인용(끝 4자리만). 시작 로그에서 .env 키가 맞는지 대조.
 _anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -69,6 +80,36 @@ class ProcessLogRequest(BaseModel):
 class GeneratePlaylistRequest(BaseModel):
     user_id: str
     date: str  # log_date, "YYYY-MM-DD"
+
+
+def _load_music_preferences(user_id: str) -> dict[str, Any]:
+    response = (
+        supabase.table("user_preferences")
+        .select("era, genres, fame_preference")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    row = response.data or {}
+    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+    preferences: dict[str, Any] = {
+        "preferred_genres": [
+            GENRE_LABELS[genre]
+            for genre in genres
+            if genre in GENRE_LABELS
+        ],
+    }
+    era = str(row.get("era") or "").strip()
+    if era:
+        preferences["preferred_era"] = era
+    fame_preference = row.get("fame_preference")
+    if fame_preference is not None:
+        try:
+            # 온보딩 UI는 왼쪽(0)이 인기곡, 오른쪽(1)이 숨은 명곡이다.
+            preferences["obscurity_preference"] = max(0.0, min(1.0, float(fame_preference)))
+        except (TypeError, ValueError):
+            pass
+    return preferences
 
 
 def _download_photo(photo_path: str) -> str | None:
@@ -180,6 +221,7 @@ def process_log(request: ProcessLogRequest) -> dict[str, Any]:
 @app.post("/generate-playlist")
 def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
     """그날 로그마다 mood_music_agent로 추천 곡 1개씩 만들어 tracks에 저장(로그 1개=곡 1개)."""
+    preferences = _load_music_preferences(request.user_id)
     logs = (
         supabase.table("daily_logs")
         .select("id, caption, situation, emotion_scores")
@@ -203,7 +245,7 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         situation = log.get("situation") or log.get("caption") or "오늘의 기록"
         emotions = log.get("emotion_scores") or {}
         try:
-            result = recommend_music(situation, emotions, limit=1)
+            result = recommend_music(situation, emotions, limit=1, preferences=preferences)
         except Exception as exc:  # 한 로그 실패가 전체를 막지 않도록.
             print(f"[service] recommend 실패 log {log['id']}: {exc}")
             continue

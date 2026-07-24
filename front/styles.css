@@ -245,11 +245,6 @@ h1 {
   cursor: pointer;
 }
 
-.blank-card {
-  aspect-ratio: 1 / 0.92;
-  min-height: 141px;
-}
-
 .era-card {
   min-height: 159px;
   display: grid;
@@ -388,38 +383,6 @@ h1 {
   cursor: pointer;
 }
 
-.finish-screen {
-  display: none;
-  position: relative;
-  text-align: center;
-}
-
-.finish-screen.active { display: block; }
-
-.finish-greeting {
-  position: absolute;
-  top: 229px;
-  left: 0;
-  right: 0;
-  margin: 0;
-  color: #0b0b0b;
-  font-size: 1.45rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.finish-screen h1 {
-  position: absolute;
-  top: 483px;
-  left: 0;
-  right: 0;
-  margin: 0;
-  color: #0b0b0b;
-  font-size: 1.52rem;
-  font-weight: 700;
-  line-height: 1.18;
-  text-align: center;
-}
 .record-home-screen { background: #deb38a; overflow: hidden; }
 .record-home-screen.active { display: block; }
 .desk-scene { position: absolute; inset: 0; overflow: hidden; }
