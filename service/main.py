@@ -125,7 +125,9 @@ def _download_photo(photo_path: str) -> str | None:
 
 def _run_intake(log: dict[str, Any], image_path: str | None) -> dict[str, Any]:
     """mood_intake_agent로 situation/image_context/emotion_scores/mood_label 산출."""
-    emotions = tuple(dict.fromkeys(log.get("emotions") or []))
+    # Repeated labels are intentional: selecting the same emotion more than once
+    # represents stronger emphasis for the intake agent.
+    emotions = tuple(log.get("emotions") or [])
     emotion_log = EmotionLog(
         caption=log.get("caption") or "",
         emoji=emotions[0] if emotions else "",

@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Play My Mood</title>
     <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260722-tonearm-overlap" />
+    <link rel="stylesheet" href="./styles.css?v=20260725-repeat-emotions" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen active login-screen" id="login-screen" aria-label="Play My Mood 로그인">
         <div class="brand">play my mood</div>
-        <button class="spotify-button" type="button" data-action="spotify-login">spotify로 로그인하기</button>
+        <button class="spotify-button" type="button" data-action="spotify-login" aria-label="Spotify로 로그인하기">
+          <img src="./assets/spotify-login-button.png" alt="" />
+        </button>
       </section>
 
       <section class="screen" id="name-screen" aria-label="시작 안내">
@@ -115,7 +117,7 @@
           <img class="welcome-note welcome-note-orange" src="./assets/music-note-orange.png" alt="" />
           <img class="welcome-player" src="./assets/record-player-straight.png" alt="" />
         </div>
-        <h1>Play My Mood와<br />오늘 하루를 음악으로<br />마무리 해봐요</h1>
+        <h1><strong>Play My Mood</strong>와<br />오늘 하루를 음악으로<br />마무리 해봐요</h1>
         <button class="next-button welcome-start-button" type="button" data-action="start-onboarding">시작하기</button>
       </section>
 
@@ -295,7 +297,7 @@
           <p class="emotion-caption-preview"></p>
         </article>
 
-        <div class="emotion-staff" aria-hidden="true">
+        <div class="emotion-staff" aria-label="선택한 감정, 음표를 누르면 선택 취소">
           <span></span>
           <span></span>
           <span></span>
@@ -389,7 +391,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260723-playback-transfer-log"></script>
+    <script src="./app.js?v=20260725-repeat-emotions"></script>
   </body>
 </html>
 

@@ -104,18 +104,23 @@ class EmotionLog:
 
 def selected_emotion_labels(log: EmotionLog) -> tuple[str, ...]:
     candidates = log.emojis or ((log.emoji,) if log.emoji else ())
-    return tuple(dict.fromkeys(
+    return tuple(
         label for label in candidates if label in CUSTOM_EMOTION_LABELS
-    ))
+    )
 
 
 def combined_emotion_prior(labels: str | tuple[str, ...] | list[str]) -> dict[str, float]:
     if isinstance(labels, str):
         labels = [labels] if labels else []
-    prior: dict[str, float] = {}
+    label_counts: dict[str, int] = {}
     for label in labels:
+        label_counts[label] = label_counts.get(label, 0) + 1
+
+    prior: dict[str, float] = {}
+    for label, count in label_counts.items():
+        repeat_boost = 1.0 + (0.12 * (count - 1))
         for key, value in CUSTOM_EMOTION_PRIORS.get(label, {}).items():
-            prior[key] = max(prior.get(key, 0.0), clamp01(value))
+            prior[key] = max(prior.get(key, 0.0), clamp01(value * repeat_boost))
     return prior
 
 
@@ -285,7 +290,8 @@ def build_analysis_prompt(logs: list[EmotionLog]) -> str:
         "Rules:\n"
         "- Do not summarize the whole day into one mood. Each log gets its own analysis and one music_agent_input.\n"
         "- Every value in the user's selected_emotion_labels is strong evidence. Blend all selected emotions; "
-        "do not discard any of them, though captions and images may refine intensity.\n"
+        "do not discard any of them, though captions and images may refine intensity. A repeated label means "
+        "the user emphasized that emotion, and more repetitions mean stronger intensity.\n"
         "- Images must be used for situation and atmosphere only: visible place, objects, lighting, color, weather, activity, and mood.\n"
         "- Do not infer private identity, sensitive traits, or exact mental-health conditions from images.\n"
         "- emotions must contain exactly these keys with values from 0.0 to 1.0: "
