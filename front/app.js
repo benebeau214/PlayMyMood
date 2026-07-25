@@ -110,6 +110,7 @@ let capturedPhotoDataUrl = "";
 let isRetakingPhoto = false;
 const MAX_EMOTION_SELECTIONS = 9;
 let selectedMoodNotes = [];
+let selectedMoodEmotions = [];
 
 // --- Supabase / Spotify 로그인 ---
 const PMM = window.PMM_CONFIG || {};
@@ -132,6 +133,9 @@ async function loginWithSpotify() {
   // 테스트용: DEV_MODE면 Spotify 대신 익명 로그인으로 즉시 세션 생성.
   if (PMM.DEV_MODE) {
     const { error } = await sb.auth.signInAnonymously();
+    // 로그인 안 하고 온보딩 페이지 확인하고 싶을 때
+    //  showScreen(screens.indexOf("name-screen"));
+    //  return;
     if (error) {
       console.error("익명 로그인 실패:", error.message);
       alert("익명 로그인 실패: " + error.message + "\n(Supabase → Authentication에서 Anonymous sign-ins를 켜야 해요)");
@@ -180,6 +184,7 @@ async function logout() {
   pendingNote = "";
   capturedPhotoDataUrl = "";
   selectedMoodNotes = [];
+  selectedMoodEmotions = [];
   if (sb) await sb.auth.signOut();
   showScreen(screens.indexOf("login-screen"));
 }
@@ -506,18 +511,16 @@ function emotionNoteSources(emotions = []) {
 }
 
 function readSelectedEmotions() {
-  const buttons = Array.from(document.querySelectorAll("#emotion-screen .emotion-choice.selected"));
-  const labels = buttons
-    .map((button) => button.dataset.emotion || button.querySelector("span")?.textContent?.trim())
-    .filter((label) => EMOTION_VALUES.includes(label));
-  const unique = [...new Set(labels)].slice(0, MAX_EMOTION_SELECTIONS);
-  if (unique.length === 0) {
+  const emotions = selectedMoodEmotions
+    .filter((emotion) => EMOTION_VALUES.includes(emotion))
+    .slice(0, MAX_EMOTION_SELECTIONS);
+  if (emotions.length === 0) {
     // 감정 버튼이 아직 플레이스홀더("기쁨" 등)라 유효한 라벨이 없으면 테스트용 기본값으로 저장.
     // 화면용 명사 라벨과 DB enum 값이 다르므로 data-emotion 값을 우선 저장한다.
     console.warn("유효한 감정 라벨 없음 → 기본값 ['기쁜']으로 저장 (감정 버튼 라벨을 실제 값으로 채워야 함)");
     return ["기쁜"];
   }
-  return unique;
+  return emotions;
 }
 
 function dataUrlToBlob(dataUrl) {
@@ -1535,10 +1538,14 @@ function renderEmotionStaff(noteSources = selectedMoodNotes) {
   emotionStaff.querySelectorAll(".staff-note").forEach((note) => note.remove());
   noteSources.slice(0, MAX_EMOTION_SELECTIONS).forEach((noteSrc, index) => {
     const position = getEmotionStaffPosition(index);
+    const emotion = selectedMoodEmotions[index] || "선택한";
     const note = document.createElement("img");
     note.className = `staff-note dynamic-staff-note note-${index + 1}`;
     note.src = noteSrc;
-    note.alt = "";
+    note.alt = `${emotion} 감정 선택 취소`;
+    note.dataset.selectionIndex = String(index);
+    note.setAttribute("role", "button");
+    note.setAttribute("tabindex", "0");
     note.style.left = `${position.left}px`;
     note.style.top = `${position.top}px`;
     emotionStaff.append(note);
@@ -1547,28 +1554,44 @@ function renderEmotionStaff(noteSources = selectedMoodNotes) {
 
 function resetEmotionStaff() {
   selectedMoodNotes = [];
+  selectedMoodEmotions = [];
   emotionStaff?.querySelectorAll(".staff-note").forEach((note) => note.remove());
   for (const item of document.querySelectorAll(".emotion-choice")) {
     item.classList.remove("selected");
     item.setAttribute("aria-selected", "false");
+    delete item.dataset.selectionCount;
   }
 }
 
-function updateSelectedMoodNotes() {
-  selectedMoodNotes = [...document.querySelectorAll(".emotion-choice.selected img")]
-    .map((source) => source.getAttribute("src") || source.src)
-    .slice(0, MAX_EMOTION_SELECTIONS);
-  renderEmotionStaff(selectedMoodNotes);
+function updateEmotionChoiceStates() {
+  for (const button of document.querySelectorAll(".emotion-choice")) {
+    const count = selectedMoodEmotions.filter((emotion) => emotion === button.dataset.emotion).length;
+    button.classList.toggle("selected", count > 0);
+    button.setAttribute("aria-selected", String(count > 0));
+    if (count > 0) button.dataset.selectionCount = String(count);
+    else delete button.dataset.selectionCount;
+  }
 }
 
 function selectEmotion(button) {
-  const isSelected = button.classList.contains("selected");
-  const selectedCount = document.querySelectorAll(".emotion-choice.selected").length;
-  if (!isSelected && selectedCount >= MAX_EMOTION_SELECTIONS) return;
+  if (selectedMoodNotes.length >= MAX_EMOTION_SELECTIONS) return;
 
-  button.classList.toggle("selected", !isSelected);
-  button.setAttribute("aria-selected", String(!isSelected));
-  updateSelectedMoodNotes();
+  const noteSource = button.querySelector("img")?.getAttribute("src");
+  const emotion = button.dataset.emotion;
+  if (!noteSource || !EMOTION_VALUES.includes(emotion)) return;
+
+  selectedMoodNotes.push(noteSource);
+  selectedMoodEmotions.push(emotion);
+  updateEmotionChoiceStates();
+  renderEmotionStaff();
+}
+
+function removeSelectedEmotion(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= selectedMoodNotes.length) return;
+  selectedMoodNotes.splice(index, 1);
+  selectedMoodEmotions.splice(index, 1);
+  updateEmotionChoiceStates();
+  renderEmotionStaff();
 }
 
 function polaroidPosition(index) {
@@ -1725,6 +1748,17 @@ document.addEventListener("keydown", (event) => {
 hitSlider?.addEventListener("input", updateHitSlider);
 zoomSlider?.addEventListener("input", applyZoom);
 zoomControl?.addEventListener("click", (event) => snapZoomToClosestLabel(event.clientX));
+emotionStaff?.addEventListener("click", (event) => {
+  const note = event.target.closest(".staff-note[data-selection-index]");
+  if (!note) return;
+  removeSelectedEmotion(Number(note.dataset.selectionIndex));
+});
+emotionStaff?.addEventListener("keydown", (event) => {
+  const note = event.target.closest(".staff-note[data-selection-index]");
+  if (!note || (event.key !== "Enter" && event.key !== " ")) return;
+  event.preventDefault();
+  removeSelectedEmotion(Number(note.dataset.selectionIndex));
+});
 if (zoomSlider) zoomSlider.value = "1";
 updateHitSlider();
 updateRecordDates();
