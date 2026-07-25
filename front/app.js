@@ -57,8 +57,14 @@ let spotifyPlayer = null;
 let spotifyDeviceId = null;
 let spotifyReady = false;
 let spotifyPlaybackStarted = false;
+let spotifyIsPremium = null;
 let currentTrackUris = [];
+let currentTrackSpotifyUrls = [];
 let currentTrackIndex = 0;
+let currentTrackPlaybackIndexes = [];
+let pendingPlaybackIndex = null;
+let pendingPlayerStartLogIndex = null;
+let pendingPlayerAutoPlay = false;
 
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
@@ -158,7 +164,13 @@ async function logout() {
   spotifyDeviceId = null;
   spotifyReady = false;
   spotifyPlaybackStarted = false;
+  spotifyIsPremium = null;
   currentTrackUris = [];
+  currentTrackSpotifyUrls = [];
+  currentTrackPlaybackIndexes = [];
+  pendingPlaybackIndex = null;
+  pendingPlayerStartLogIndex = null;
+  pendingPlayerAutoPlay = false;
   currentTrackLogs = [];
   hasTodayPlaylist = false;
   logs.length = 0;
@@ -199,6 +211,35 @@ async function getSpotifyAccessToken() {
   return data.session?.provider_token || null;
 }
 
+async function refreshSpotifyPremiumStatus(token = null) {
+  const accessToken = token || await getSpotifyAccessToken();
+  if (!accessToken) {
+    spotifyIsPremium = false;
+    return spotifyIsPremium;
+  }
+  try {
+    const response = await fetch("https://api.spotify.com/v1/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return spotifyIsPremium;
+    const profile = await response.json();
+    spotifyIsPremium = profile.product === "premium";
+    return spotifyIsPremium;
+  } catch (error) {
+    console.warn("Spotify 계정 등급 확인 실패:", error);
+    return spotifyIsPremium;
+  }
+}
+
+function openTrackInSpotify(index) {
+  const url = currentTrackSpotifyUrls[index];
+  if (!url) {
+    console.warn("Spotify로 이동할 곡 URL이 없습니다.");
+    return;
+  }
+  window.location.assign(url);
+}
+
 window.onSpotifyWebPlaybackSDKReady = () => {
   spotifyReady = true;
   initSpotifyPlayerIfPossible();
@@ -209,6 +250,9 @@ async function initSpotifyPlayerIfPossible() {
   const token = await getSpotifyAccessToken();
   // DEV_MODE 익명 로그인 등 실제 Spotify OAuth 토큰이 없으면 재생 기능은 조용히 비활성.
   if (!token) return;
+  await refreshSpotifyPremiumStatus(token);
+  // 무료 계정은 Web Playback SDK 대신 곡 클릭 시 Spotify 곡 페이지로 이동한다.
+  if (spotifyIsPremium === false) return;
 
   spotifyPlayer = new window.Spotify.Player({
     name: "Play My Mood",
@@ -225,6 +269,11 @@ async function initSpotifyPlayerIfPossible() {
   spotifyPlayer.addListener("ready", ({ device_id }) => {
     spotifyDeviceId = device_id;
     console.log("Spotify 플레이어 준비 완료, device_id =", device_id);
+    if (pendingPlaybackIndex !== null && currentTrackUris.length) {
+      const startIndex = pendingPlaybackIndex;
+      pendingPlaybackIndex = null;
+      startSpotifyPlaybackAt(startIndex);
+    }
   });
   spotifyPlayer.addListener("not_ready", () => {
     spotifyDeviceId = null;
@@ -235,11 +284,32 @@ async function initSpotifyPlayerIfPossible() {
   spotifyPlayer.addListener("authentication_error", ({ message }) =>
     console.error("Spotify 인증 실패:", message),
   );
-  spotifyPlayer.addListener("account_error", ({ message }) =>
-    console.error("Spotify 계정 오류(Premium 계정이 아니면 재생 불가):", message),
-  );
+  spotifyPlayer.addListener("account_error", ({ message }) => {
+    spotifyIsPremium = false;
+    console.error("Spotify 계정 오류(Premium 계정이 아니면 재생 불가):", message);
+    if (pendingPlaybackIndex !== null) {
+      const fallbackIndex = pendingPlaybackIndex;
+      pendingPlaybackIndex = null;
+      openTrackInSpotify(fallbackIndex);
+    }
+  });
   spotifyPlayer.addListener("player_state_changed", (state) => {
     if (!state) return;
+    const currentUri = state.track_window?.current_track?.uri;
+    const playingIndex = currentTrackUris.indexOf(currentUri);
+    if (playingIndex >= 0) {
+      currentTrackIndex = playingIndex;
+      document.querySelectorAll("#playlist-player-screen .player-track").forEach((row) => {
+        row.classList.toggle("current", Number(row.dataset.playbackIndex) === playingIndex);
+      });
+    }
+    const reachedPlaylistEnd =
+      state.paused &&
+      state.position === 0 &&
+      currentTrackIndex === currentTrackUris.length - 1 &&
+      !(state.track_window?.next_tracks?.length);
+    if (!state.paused) spotifyPlaybackStarted = true;
+    else if (reachedPlaylistEnd) spotifyPlaybackStarted = false;
     setPlayerPlaying(!state.paused);
   });
 
@@ -282,8 +352,8 @@ async function playSpotifyTrackAt(index) {
     return;
   }
   currentTrackIndex = ((index % currentTrackUris.length) + currentTrackUris.length) % currentTrackUris.length;
-  const uri = currentTrackUris[currentTrackIndex];
-  console.log("[재생 시도] uri =", uri);
+  const uris = currentTrackUris.slice(currentTrackIndex);
+  console.log("[재생 시도] uris =", uris);
   await transferPlaybackToThisDevice(token);
   await new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -299,7 +369,8 @@ async function playSpotifyTrackAt(index) {
         Authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ uris: [uri] }),
+      // 선택한 곡부터 마지막 곡까지 한 번에 전달해 Spotify가 자동으로 다음 곡을 재생하게 한다.
+      body: JSON.stringify({ uris }),
     });
     if (response.ok) {
       console.log("[재생 성공]");
@@ -317,6 +388,26 @@ async function playSpotifyTrackAt(index) {
           ? " → device_id가 계속 인식되지 않음. 탭을 새로고침해서 SDK를 다시 연결해보세요"
           : ""),
   );
+}
+
+async function startSpotifyPlaybackAt(index = 0) {
+  if (!currentTrackUris.length) return;
+  const normalizedIndex = Math.max(0, Math.min(index, currentTrackUris.length - 1));
+  if (spotifyIsPremium === null) await refreshSpotifyPremiumStatus();
+  if (spotifyIsPremium === false) {
+    openTrackInSpotify(normalizedIndex);
+    return;
+  }
+  if (!spotifyDeviceId) {
+    pendingPlaybackIndex = normalizedIndex;
+    initSpotifyPlayerIfPossible();
+    console.warn("Spotify 플레이어 준비 후 재생을 시작합니다.");
+    return;
+  }
+  pendingPlaybackIndex = null;
+  spotifyPlaybackStarted = true;
+  setPlayerPlaying(true);
+  playSpotifyTrackAt(normalizedIndex);
 }
 
 // --- 온보딩 값 수집 → Supabase 저장 ---
@@ -1070,7 +1161,7 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
 
   const { data: dayLogs, error } = await sb
     .from("daily_logs")
-    .select("id, photo_path, sticker_path, tracks(title, artists, spotify_url)")
+    .select("id, caption, photo_path, sticker_path, logged_at, emotions, tracks(title, artists, spotify_url)")
     .eq("user_id", userId)
     .eq("log_date", playlist.playlist_date)
     .order("logged_at");
@@ -1081,11 +1172,17 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
 
   await renderStickerCover(document.querySelector("#archive-playlist-detail-screen .archive-detail-square"), dayLogs || []);
 
+  currentTrackLogs = [];
   if (tracksSection) {
-    for (const log of dayLogs || []) {
+    for (let index = 0; index < (dayLogs || []).length; index += 1) {
+      const log = dayLogs[index];
       const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
       const row = document.createElement("div");
       row.className = "archive-detail-track";
+      row.dataset.action = "play-archive-track";
+      row.dataset.trackIndex = String(index);
+      row.setAttribute("role", "button");
+      row.tabIndex = 0;
       const thumb = document.createElement("span");
       const photoUrl = await signedUrl(log.photo_path);
       if (photoUrl) {
@@ -1097,7 +1194,23 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
       const title = track?.title || "추천 곡 준비중";
       const artist = (track?.artists && track.artists[0]) || "";
       info.innerHTML = `${title}<br />${artist}`;
-      row.append(thumb, info);
+      currentTrackLogs[index] = {
+        caption: log.caption,
+        photo: photoUrl,
+        date: formatDisplayDate(playlist.playlist_date),
+        time: formatDisplayTime(log.logged_at),
+        moodNotes: emotionNoteSources(log.emotions),
+      };
+
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "archive-track-more";
+      more.dataset.action = "open-track-log";
+      more.dataset.trackIndex = String(index);
+      more.setAttribute("aria-label", `${title} 로그 보기`);
+      more.textContent = "•••";
+
+      row.append(thumb, info, more);
       tracksSection.append(row);
     }
   }
@@ -1120,6 +1233,7 @@ async function renderPlaylistPlayer() {
   // 이전에 재생 중이던 게 있으면 멈춰서, 리셋되는 UI 상태(재생 안 함)와 실제 재생 상태를 맞춘다.
   spotifyPlayer?.pause().catch(() => {});
   spotifyPlaybackStarted = false;
+  pendingPlaybackIndex = null;
   currentTrackIndex = 0;
   setPlayerPlaying(false);
 
@@ -1139,10 +1253,19 @@ async function renderPlaylistPlayer() {
   }
 
   await renderPlayerTracks(date);
+  if (pendingPlayerAutoPlay) {
+    const requestedLogIndex = pendingPlayerStartLogIndex ?? 0;
+    const requestedPlaybackIndex = currentTrackPlaybackIndexes[requestedLogIndex];
+    pendingPlayerAutoPlay = false;
+    pendingPlayerStartLogIndex = null;
+    startSpotifyPlaybackAt(requestedPlaybackIndex >= 0 ? requestedPlaybackIndex : 0);
+  }
 }
 
 async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
   currentTrackUris = [];
+  currentTrackSpotifyUrls = [];
+  currentTrackPlaybackIndexes = [];
   const userId = await currentUserId();
   if (!userId) return;
   const { data: logRows, error } = await sb
@@ -1186,13 +1309,20 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
     const track = Array.isArray(log.tracks) ? log.tracks[0] : log.tracks;
 
     const trackId = trackIdFromSpotifyUrl(track?.spotify_url);
-    if (trackId) currentTrackUris.push(`spotify:track:${trackId}`);
+    const playbackIndex = trackId ? currentTrackUris.push(`spotify:track:${trackId}`) - 1 : -1;
+    if (playbackIndex >= 0) {
+      currentTrackSpotifyUrls[playbackIndex] =
+        track.spotify_url || `https://open.spotify.com/track/${trackId}`;
+    }
+    currentTrackPlaybackIndexes[index] = playbackIndex;
 
-    const button = document.createElement("button");
-    button.className = "player-track";
-    button.type = "button";
-    button.dataset.action = "open-track-log";
-    button.dataset.trackIndex = String(index);
+    const row = document.createElement("div");
+    row.className = "player-track";
+    row.dataset.action = "play-player-track";
+    row.dataset.trackIndex = String(index);
+    row.dataset.playbackIndex = String(playbackIndex);
+    row.setAttribute("role", "button");
+    row.tabIndex = 0;
 
     const thumb = document.createElement("span");
     const photoUrl = await signedUrl(log.photo_path);
@@ -1214,8 +1344,16 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
     const artist = (track?.artists && track.artists[0]) || "";
     strong.innerHTML = `${title}<br />${artist}`;
 
-    button.append(thumb, strong);
-    list.append(button);
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "player-track-more";
+    more.dataset.action = "open-track-log";
+    more.dataset.trackIndex = String(index);
+    more.setAttribute("aria-label", `${title} 로그 보기`);
+    more.textContent = "•••";
+
+    row.append(thumb, strong, more);
+    list.append(row);
   }
 }
 
@@ -1576,6 +1714,14 @@ archiveMonthCarousel?.addEventListener("scroll", () => {
   });
 });
 
+document.addEventListener("keydown", (event) => {
+  if (event.target.closest?.("button")) return;
+  const row = event.target.closest?.(".archive-detail-track[data-action], .player-track[data-action]");
+  if (!row || (event.key !== "Enter" && event.key !== " ")) return;
+  event.preventDefault();
+  row.click();
+});
+
 hitSlider?.addEventListener("input", updateHitSlider);
 zoomSlider?.addEventListener("input", applyZoom);
 zoomControl?.addEventListener("click", (event) => snapZoomToClosestLabel(event.clientX));
@@ -1584,7 +1730,7 @@ updateHitSlider();
 updateRecordDates();
 applyZoom();
 document.addEventListener("click", (event) => {
-  const target = event.target.closest("button");
+  const target = event.target.closest("[data-action], button");
   if (!target) return;
   const action = target.dataset.action;
 
@@ -1639,7 +1785,28 @@ document.addEventListener("click", (event) => {
     playerEntryMode = target.dataset.playerEntry || "archive";
     activePlayerDate =
       playerEntryMode === "home" ? todayKstDate() : getActiveArchivePlaylistRow()?.playlist_date || todayKstDate();
+    pendingPlayerAutoPlay = target.dataset.autoplay === "true";
+    pendingPlayerStartLogIndex = pendingPlayerAutoPlay ? 0 : null;
     showScreen(screens.indexOf("playlist-player-screen"));
+    return;
+  }
+
+  if (action === "play-archive-track") {
+    playerEntryMode = "archive";
+    activePlayerDate = getActiveArchivePlaylistRow()?.playlist_date || todayKstDate();
+    pendingPlayerStartLogIndex = Number(target.dataset.trackIndex || 0);
+    pendingPlayerAutoPlay = true;
+    showScreen(screens.indexOf("playlist-player-screen"));
+    return;
+  }
+
+  if (action === "play-player-track") {
+    const playbackIndex = Number(target.dataset.playbackIndex);
+    if (Number.isInteger(playbackIndex) && playbackIndex >= 0) {
+      startSpotifyPlaybackAt(playbackIndex);
+    } else {
+      console.warn("재생할 Spotify 트랙 URL이 없습니다.");
+    }
     return;
   }
 
@@ -1733,19 +1900,16 @@ document.addEventListener("click", (event) => {
     console.log(
       `[재생버튼] spotifyDeviceId=${spotifyDeviceId} currentTrackUris.length=${currentTrackUris.length} spotifyPlaybackStarted=${spotifyPlaybackStarted} isPlayerPlaying=${isPlayerPlaying}`,
     );
-    if (spotifyDeviceId && currentTrackUris.length) {
-      // 실제 Spotify 응답(player_state_changed)을 기다리지 않고 우선 눈에 보이는 반응부터 준다.
-      // 이후 상태가 다르면 player_state_changed 리스너가 다시 맞춰준다.
-      setPlayerPlaying(!isPlayerPlaying);
+    if (currentTrackUris.length) {
       if (!spotifyPlaybackStarted) {
-        spotifyPlaybackStarted = true;
-        playSpotifyTrackAt(currentTrackIndex);
-      } else {
+        // 하단 버튼의 첫 재생은 항상 전체 목록의 첫 곡부터 시작한다.
+        startSpotifyPlaybackAt(0);
+      } else if (spotifyPlayer) {
+        setPlayerPlaying(!isPlayerPlaying);
         spotifyPlayer?.togglePlay().catch((err) => console.error("togglePlay 실패:", err));
       }
     } else {
-      // Spotify 재생 준비가 안 된 경우(익명 로그인/토큰 만료/트랙 없음 등)엔 LP 애니메이션만 토글.
-      setPlayerPlaying(!isPlayerPlaying);
+      console.warn("재생할 Spotify 트랙이 없습니다.");
     }
     return;
   }
@@ -1756,9 +1920,7 @@ document.addEventListener("click", (event) => {
     currentTrackIndex = (currentTrackIndex + delta + currentTrackUris.length) % currentTrackUris.length;
     console.log(`[${action}] spotifyDeviceId=${spotifyDeviceId} newIndex=${currentTrackIndex}`);
     if (spotifyDeviceId) {
-      spotifyPlaybackStarted = true;
-      setPlayerPlaying(true);
-      playSpotifyTrackAt(currentTrackIndex);
+      startSpotifyPlaybackAt(currentTrackIndex);
     }
     return;
   }
@@ -1799,68 +1961,3 @@ document.addEventListener("click", (event) => {
 
 renderPolaroids();
 initAuth();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
