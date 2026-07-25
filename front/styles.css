@@ -3598,3 +3598,39 @@ h1 {
   display: none;
 }
 
+/* Archive/player track actions: row plays the song, ellipsis opens its log. */
+.archive-detail-track,
+.playlist-player-screen .player-track {
+  grid-template-columns: 52px minmax(0, 1fr) 34px;
+  cursor: pointer;
+}
+
+.archive-detail-track:focus-visible,
+.playlist-player-screen .player-track:focus-visible {
+  outline: 2px solid #5b5b5b;
+  outline-offset: -2px;
+}
+
+.archive-track-more,
+.player-track-more {
+  width: 34px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.playlist-player-screen .player-track.current {
+  background: rgba(255, 159, 85, 0.12);
+}
+
+.playlist-player-screen .player-track.current strong {
+  color: #ff6b00;
+  font-weight: 600;
+}
+
