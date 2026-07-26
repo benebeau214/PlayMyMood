@@ -1,0 +1,95 @@
+{
+  "stickers": [
+    {
+      "log_id": "rainy_commute",
+      "log_text": "퇴근길에 갑자기 비가 쏟아졌다. 우산을 쓰고 천천히 걸으니 빗소리 덕분에 복잡했던 마음이 차분해졌다.",
+      "concept": "우산 아래서 빗소리를 듣는 차분한 순간",
+      "symbol": "umbrella",
+      "emotion_label": "차분함",
+      "emotion_intensity": 0.78,
+      "eye_shape": "short curved eyes",
+      "mouth_shape": "small closed smile",
+      "accent": "raindrops",
+      "primary_color": "#5B8DBE",
+      "secondary_color": "#A8D5E2",
+      "highlight_color": "#89ADD0",
+      "shadow_color": "#426689",
+      "color_rationale": "빗날씨의 진정한 파란색과 빗방울의 밝은 하늘색으로 차분하고 고요한 분위기 표현",
+      "image_prompt": "Use the provided image only as a visual style reference, never as a shape or subject reference. Create a brand-new illustrated die-cut sticker representing 우산 아래서 빗소리를 듣는 차분한 순간 with one bold, log-specific central symbol: umbrella. It must communicate 차분함 at 0.78 emotional intensity. Use short curved eyes for the eyes and small closed smile for the mouth. Keep the facial marks tiny, softly curved, friendly, and subordinate to the main symbol. Use no visible eye whites, bulging or staring eyes, large open mouth, exposed teeth, or aggressive brows. Do not default to a smile when the specified mouth or emotion is neutral or negative. Add raindrops as the only optional small accent. Match the reference's hip indie-zine, record-shop, and street-culture sticker language: a bold compact silhouette; playful asymmetry; confident chunky deep-ink contours; flat two-color risograph or screen-print layers; small halftone clusters; and a controlled slightly misregistered color edge. Use an exact #5B8DBE main color and one punchy #A8D5E2 secondary color, plus deep ink and white only. Keep the texture intentional and graphic, with crisp shapes and restrained print grain rather than dirty grunge or damaged surfaces. The result should feel witty, current, collectible, and effortlessly cool without becoming aggressive, scary, luxury, corporate, or childish. Keep the symbol crisp and immediately readable at emoji size. This is one standalone sticker, never an album cover, poster, label, package, or multi-object scene. Surround the complete silhouette with one smooth opaque white die-cut sticker border and a very soft thin pale-gray separation edge so the border remains distinct from the white canvas. Use no text, letters, numbers, punctuation, captions, speech bubbles, logos, brands, signatures, or watermarks anywhere. Do not add typography-like marks, fake labels, interface symbols, barcodes, or decorative writing. Avoid glossy rendering, gradients, realistic lighting, smooth corporate vector polish, 3D volume, photorealistic texture, black-heavy artwork, sharp threatening shapes, grotesque distortion, horror, or edgy band-merch styling. Place one large centered sticker on a square canvas with generous padding. The entire area outside the sticker is one perfectly uniform pure white (#FFFFFF) field, edge to edge. Render the background as actual solid white pixels, never as a transparency checkerboard or pattern.",
+      "image_url": "https://replicate.delivery/xezq/7QKRDbILekxkHCc5Pf31zuvfWklFTmy565qfXSlWfKCLKAl3C/tmp1upyz9os.png",
+      "local_path": "output/emoji_style_choices/hip_v1/sticker_01.png"
+    },
+    {
+      "log_id": "overslept",
+      "log_text": "알람을 듣지 못하고 늦잠을 잤다. 시계를 확인한 순간 지각할 것 같아 심장이 철렁하고 몹시 당황했다.",
+      "concept": "알람을 놓친 시계",
+      "symbol": "alarm clock",
+      "emotion_label": "당황",
+      "emotion_intensity": 0.92,
+      "eye_shape": "short curved",
+      "mouth_shape": "small O",
+      "accent": "sweat drop",
+      "primary_color": "#E74C3C",
+      "secondary_color": "#F39C12",
+      "highlight_color": "#EE7E73",
+      "shadow_color": "#A6372B",
+      "color_rationale": "긴급하고 불안한 상황을 나타내는 따뜻한 빨강과 주황색으로, 시간이 촉박한 심장 철렁함을 표현",
+      "image_prompt": "Use the provided image only as a visual style reference, never as a shape or subject reference. Create a brand-new illustrated die-cut sticker representing 알람을 놓친 시계 with one bold, log-specific central symbol: alarm clock. It must communicate 당황 at 0.92 emotional intensity. Use short curved for the eyes and small O for the mouth. Keep the facial marks tiny, softly curved, friendly, and subordinate to the main symbol. Use no visible eye whites, bulging or staring eyes, large open mouth, exposed teeth, or aggressive brows. Do not default to a smile when the specified mouth or emotion is neutral or negative. Add sweat drop as the only optional small accent. Emotion accents must remain purely pictorial; do not render alarm punctuation, question punctuation, sleep-letter glyphs, letters, numbers, or words. Match the reference's hip indie-zine, record-shop, and street-culture sticker language: a bold compact silhouette; playful asymmetry; confident chunky deep-ink contours; flat two-color risograph or screen-print layers; small halftone clusters; and a controlled slightly misregistered color edge. Use an exact #E74C3C main color and one punchy #F39C12 secondary color, plus deep ink and white only. Keep the texture intentional and graphic, with crisp shapes and restrained print grain rather than dirty grunge or damaged surfaces. The result should feel witty, current, collectible, and effortlessly cool without becoming aggressive, scary, luxury, corporate, or childish. Keep the symbol crisp and immediately readable at emoji size. This is one standalone sticker, never an album cover, poster, label, package, or multi-object scene. Surround the complete silhouette with one smooth opaque white die-cut sticker border and a very soft thin pale-gray separation edge so the border remains distinct from the white canvas. Use no text, letters, numbers, punctuation, captions, speech bubbles, logos, brands, signatures, or watermarks anywhere. Do not add typography-like marks, fake labels, interface symbols, barcodes, or decorative writing. Avoid glossy rendering, gradients, realistic lighting, smooth corporate vector polish, 3D volume, photorealistic texture, black-heavy artwork, sharp threatening shapes, grotesque distortion, horror, or edgy band-merch styling. Place one large centered sticker on a square canvas with generous padding. The entire area outside the sticker is one perfectly uniform pure white (#FFFFFF) field, edge to edge. Render the background as actual solid white pixels, never as a transparency checkerboard or pattern.",
+      "image_url": "https://replicate.delivery/xezq/KRru3920044gA5zPORcO6aSvEQ5gk814BbLFxudKDIo8AKvF/tmpv6bxjp3n.png",
+      "local_path": "output/emoji_style_choices/hip_v1/sticker_02.png"
+    },
+    {
+      "log_id": "surprise_birthday",
+      "log_text": "친구들이 몰래 준비한 생일 케이크를 꺼내며 축하해줬다. 예상하지 못한 다정함에 크게 기쁘고 감동했다.",
+      "concept": "친구들이 꺼낸 생일 케이크의 기쁨",
+      "symbol": "birthday cake",
+      "emotion_label": "기쁨",
+      "emotion_intensity": 0.94,
+      "eye_shape": "short curved eyes",
+      "mouth_shape": "small curved smile",
+      "accent": "sparkles",
+      "primary_color": "#E8A5C1",
+      "secondary_color": "#F4D4A8",
+      "highlight_color": "#EEBED2",
+      "shadow_color": "#A7778B",
+      "color_rationale": "축하와 따뜻함의 분홍색과 케이크의 부드러운 크림색으로 감동과 기쁨 표현",
+      "image_prompt": "Use the provided image only as a visual style reference, never as a shape or subject reference. Create a brand-new illustrated die-cut sticker representing 친구들이 꺼낸 생일 케이크의 기쁨 with one bold, log-specific central symbol: birthday cake. It must communicate 기쁨 at 0.94 emotional intensity. Use short curved eyes for the eyes and small curved smile for the mouth. Keep the facial marks tiny, softly curved, friendly, and subordinate to the main symbol. Use no visible eye whites, bulging or staring eyes, large open mouth, exposed teeth, or aggressive brows. Do not default to a smile when the specified mouth or emotion is neutral or negative. Add sparkles as the only optional small accent. Match the reference's hip indie-zine, record-shop, and street-culture sticker language: a bold compact silhouette; playful asymmetry; confident chunky deep-ink contours; flat two-color risograph or screen-print layers; small halftone clusters; and a controlled slightly misregistered color edge. Use an exact #E8A5C1 main color and one punchy #F4D4A8 secondary color, plus deep ink and white only. Keep the texture intentional and graphic, with crisp shapes and restrained print grain rather than dirty grunge or damaged surfaces. The result should feel witty, current, collectible, and effortlessly cool without becoming aggressive, scary, luxury, corporate, or childish. Keep the symbol crisp and immediately readable at emoji size. This is one standalone sticker, never an album cover, poster, label, package, or multi-object scene. Surround the complete silhouette with one smooth opaque white die-cut sticker border and a very soft thin pale-gray separation edge so the border remains distinct from the white canvas. Use no text, letters, numbers, punctuation, captions, speech bubbles, logos, brands, signatures, or watermarks anywhere. Do not add typography-like marks, fake labels, interface symbols, barcodes, or decorative writing. Avoid glossy rendering, gradients, realistic lighting, smooth corporate vector polish, 3D volume, photorealistic texture, black-heavy artwork, sharp threatening shapes, grotesque distortion, horror, or edgy band-merch styling. Place one large centered sticker on a square canvas with generous padding. The entire area outside the sticker is one perfectly uniform pure white (#FFFFFF) field, edge to edge. Render the background as actual solid white pixels, never as a transparency checkerboard or pattern.",
+      "image_url": "https://replicate.delivery/xezq/aQBRrDvMiFaRKNbH3KPaj5D3EdmHciAysi5k7cmkeGF5AUeWA/tmp81gvjdsu.png",
+      "local_path": "output/emoji_style_choices/hip_v1/sticker_03.png"
+    },
+    {
+      "log_id": "late_overtime",
+      "log_text": "새벽까지 야근한 뒤 노트북을 겨우 닫았다. 집중력이 바닥나고 눈도 제대로 뜨기 어려울 만큼 완전히 지쳤다.",
+      "concept": "밤새 켜진 노트북",
+      "symbol": "laptop",
+      "emotion_label": "탈진",
+      "emotion_intensity": 0.97,
+      "eye_shape": "gently drooping",
+      "mouth_shape": "flat line",
+      "accent": "none",
+      "primary_color": "#63788D",
+      "secondary_color": "#7F8C8D",
+      "highlight_color": "#8F9EAD",
+      "shadow_color": "#475666",
+      "color_rationale": "새벽의 어두운 밤 시간과 극도의 피로감을 나타내는 차분한 회색-파랑 톤으로 지친 감정을 부드럽게 표현",
+      "image_prompt": "Use the provided image only as a visual style reference, never as a shape or subject reference. Create a brand-new illustrated die-cut sticker representing 밤새 켜진 노트북 with one bold, log-specific central symbol: laptop. It must communicate 탈진 at 0.97 emotional intensity. Use gently drooping for the eyes and flat line for the mouth. Keep the facial marks tiny, softly curved, friendly, and subordinate to the main symbol. Use no visible eye whites, bulging or staring eyes, large open mouth, exposed teeth, or aggressive brows. Do not default to a smile when the specified mouth or emotion is neutral or negative. Add none as the only optional small accent. Emotion accents must remain purely pictorial; do not render alarm punctuation, question punctuation, sleep-letter glyphs, letters, numbers, or words. Match the reference's hip indie-zine, record-shop, and street-culture sticker language: a bold compact silhouette; playful asymmetry; confident chunky deep-ink contours; flat two-color risograph or screen-print layers; small halftone clusters; and a controlled slightly misregistered color edge. Use an exact #63788D main color and one punchy #7F8C8D secondary color, plus deep ink and white only. Keep the texture intentional and graphic, with crisp shapes and restrained print grain rather than dirty grunge or damaged surfaces. The result should feel witty, current, collectible, and effortlessly cool without becoming aggressive, scary, luxury, corporate, or childish. Keep the symbol crisp and immediately readable at emoji size. This is one standalone sticker, never an album cover, poster, label, package, or multi-object scene. Surround the complete silhouette with one smooth opaque white die-cut sticker border and a very soft thin pale-gray separation edge so the border remains distinct from the white canvas. Use no text, letters, numbers, punctuation, captions, speech bubbles, logos, brands, signatures, or watermarks anywhere. Do not add typography-like marks, fake labels, interface symbols, barcodes, or decorative writing. Avoid glossy rendering, gradients, realistic lighting, smooth corporate vector polish, 3D volume, photorealistic texture, black-heavy artwork, sharp threatening shapes, grotesque distortion, horror, or edgy band-merch styling. Place one large centered sticker on a square canvas with generous padding. The entire area outside the sticker is one perfectly uniform pure white (#FFFFFF) field, edge to edge. Render the background as actual solid white pixels, never as a transparency checkerboard or pattern.",
+      "image_url": "https://replicate.delivery/xezq/sY8aXpWC0TozNptzXHQw19JY2OEZM1XuA1GWJJSpYnuABKvF/tmp_r7xy3tl.png",
+      "local_path": "output/emoji_style_choices/hip_v1/sticker_04.png"
+    }
+  ],
+  "style_variant": "hip",
+  "style_reference": "agent/assets/emoji_sticker_style_reference_hip_v1.png",
+  "sources": {
+    "claude_model": "claude-haiku-4-5",
+    "image_model": "google/nano-banana-2",
+    "sticker_count": 4
+  },
+  "selection": {
+    "method": "visual review of real hip-style agent generations",
+    "criteria": [
+      "hip risograph style",
+      "no text or punctuation glyphs",
+      "no frightening imagery"
+    ]
+  }
+}
