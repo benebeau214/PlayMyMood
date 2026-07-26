@@ -35,7 +35,9 @@
   --design-width: 393;
   --design-height: 852;
   --app-scale: 1;
+  --app-width: 393px;
   --app-height: 852px;
+  --app-side-space: 0px;
   --app-render-height: 852px;
   color: #0b0b0b;
   background: #9a9a9a;
@@ -64,7 +66,7 @@ button, input { font: inherit; }
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 393px;
+  width: var(--app-width);
   height: var(--app-height);
   min-height: 0;
   background: var(--app-bg);
@@ -741,6 +743,28 @@ h1 {
     left: 50%;
     transform: translateX(-50%) scale(var(--app-scale));
     transform-origin: top center;
+  }
+
+  .app-shell.record-home-background {
+    background: linear-gradient(
+      to bottom,
+      var(--app-bg) 0 159px,
+      #deb38a 159px 100%
+    );
+  }
+
+  .screen {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    right: auto;
+    width: 393px;
+    transform: translateX(-50%);
+  }
+
+  .capture-screen .camera-preview {
+    left: calc(-1 * var(--app-side-space));
+    right: calc(-1 * var(--app-side-space));
   }
 }
 

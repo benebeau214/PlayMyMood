@@ -5,15 +5,22 @@ function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
   const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
   const usesFullMobileWidth = viewportWidth <= 600;
+  const widthScale = viewportWidth / DESIGN_WIDTH;
+  const heightScale = viewportHeight / DESIGN_HEIGHT;
   const scale = usesFullMobileWidth
-    ? viewportWidth / DESIGN_WIDTH
-    : Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1.15);
+    ? Math.min(widthScale, Math.max(heightScale, Math.min(1, widthScale)))
+    : Math.min(widthScale, heightScale, 1.15);
+  const appWidth = usesFullMobileWidth
+    ? Math.max(DESIGN_WIDTH, viewportWidth / scale)
+    : DESIGN_WIDTH;
   const appHeight = usesFullMobileWidth
     ? Math.max(DESIGN_HEIGHT, viewportHeight / scale)
     : DESIGN_HEIGHT;
 
   document.documentElement.style.setProperty("--app-scale", String(scale));
+  document.documentElement.style.setProperty("--app-width", `${appWidth}px`);
   document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
+  document.documentElement.style.setProperty("--app-side-space", `${Math.max(0, (appWidth - DESIGN_WIDTH) / 2)}px`);
   document.documentElement.style.setProperty("--app-render-height", `${appHeight * scale}px`);
 }
 
@@ -1556,6 +1563,10 @@ function showScreen(index) {
   }
 
   const currentScreen = screens[currentIndex];
+  document.querySelector(".app-shell")?.classList.toggle(
+    "record-home-background",
+    currentScreen === "record-home-screen",
+  );
   if (currentScreen === "capture-screen") {
     startCamera();
   } else {
