@@ -4,14 +4,22 @@ const DESIGN_HEIGHT = 874;
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
   const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
-  // 피그마 프레임(402x874)을 그대로 유지한다.
-  // - 두 축 모두에 맞춰 축소하므로 비율이 절대 깨지지 않는다.
-  // - 1을 넘기지 않으므로 오브젝트가 디자인보다 커지지 않는다.
-  const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1);
+  const root = document.documentElement.style;
 
-  document.documentElement.style.setProperty("--app-scale", String(scale));
-  document.documentElement.style.setProperty("--app-width", `${DESIGN_WIDTH}px`);
-  document.documentElement.style.setProperty("--app-height", `${DESIGN_HEIGHT}px`);
+  if (viewportWidth <= 600) {
+    // 모바일: 화면을 꽉 채운다. 가로·세로를 각각 뷰포트에 맞춰 스케일
+    // (402x874 vs 폰 비율 차이가 미미해서 왜곡은 거의 없음).
+    root.setProperty("--app-scale-x", String(viewportWidth / DESIGN_WIDTH));
+    root.setProperty("--app-scale-y", String(viewportHeight / DESIGN_HEIGHT));
+  } else {
+    // 데스크탑: 비율 유지하며 축소(회색 배경 위 폰 프레임). 1을 넘기지 않음.
+    const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1);
+    root.setProperty("--app-scale-x", String(scale));
+    root.setProperty("--app-scale-y", String(scale));
+  }
+
+  root.setProperty("--app-width", `${DESIGN_WIDTH}px`);
+  root.setProperty("--app-height", `${DESIGN_HEIGHT}px`);
 }
 
 updateAppScale();

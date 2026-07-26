@@ -35,6 +35,8 @@
   --design-width: 402;
   --design-height: 874;
   --app-scale: 1;
+  --app-scale-x: 1;
+  --app-scale-y: 1;
   --app-width: 402px;
   --app-height: 874px;
   color: #0b0b0b;
@@ -69,7 +71,7 @@ button, input { font: inherit; }
   min-height: 0;
   background: var(--app-bg);
   overflow: hidden;
-  transform: translate(-50%, -50%) scale(var(--app-scale));
+  transform: translate(-50%, -50%) scale(var(--app-scale-x), var(--app-scale-y));
   transform-origin: center center;
 }
 
