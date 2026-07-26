@@ -65,6 +65,7 @@ let currentTrackPlaybackIndexes = [];
 let pendingPlaybackIndex = null;
 let pendingPlayerStartLogIndex = null;
 let pendingPlayerAutoPlay = false;
+const pendingLogProcessingTasks = new Set();
 
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
@@ -573,22 +574,49 @@ async function saveLog({ photo, caption, emotions }) {
   }
   console.log("로그 저장 완료 ✓");
 
-  // 에이전트 서비스에 처리 요청(백그라운드). 서비스가 꺼져 있어도 로그 저장엔 영향 없음.
+  // 스티커와 감정 분석이 끝날 때까지 이 저장 작업을 완료 상태로 보지 않는다.
+  // 플레이리스트 생성 화면은 아래 요청이 끝난 뒤 최신 sticker_path를 다시 조회한다.
   if (PMM.AGENT_SERVICE_URL && inserted?.id) {
-    fetch(`${PMM.AGENT_SERVICE_URL}/process-log`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ log_id: inserted.id }),
-    })
-      .then((res) => {
-        if (res.ok) console.log("에이전트 처리 요청 보냄 (situation/스티커 등 채워짐)");
-        else console.warn("에이전트 서비스 응답 오류:", res.status);
-      })
-      .catch(() => console.warn("에이전트 서비스 호출 실패 (서비스가 안 켜져 있을 수 있음)"));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    try {
+      const response = await fetch(`${PMM.AGENT_SERVICE_URL}/process-log`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ log_id: inserted.id }),
+        signal: controller.signal,
+      });
+      if (response.ok) console.log("에이전트 처리 완료 (situation/스티커 등 채워짐)");
+      else console.warn("에이전트 서비스 응답 오류:", response.status);
+    } catch (error) {
+      console.warn(
+        error?.name === "AbortError"
+          ? "에이전트 처리가 3분을 넘어 대기를 종료했어요."
+          : "에이전트 서비스 호출 실패 (서비스가 안 켜져 있을 수 있음)",
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
 // --- 플레이리스트 생성 + 편집 화면 렌더 ---
+function trackLogProcessing(task) {
+  const trackedTask = Promise.resolve(task);
+  pendingLogProcessingTasks.add(trackedTask);
+  trackedTask.then(
+    () => pendingLogProcessingTasks.delete(trackedTask),
+    () => pendingLogProcessingTasks.delete(trackedTask),
+  );
+  return trackedTask;
+}
+
+async function waitForPendingLogProcessing() {
+  while (pendingLogProcessingTasks.size > 0) {
+    await Promise.allSettled([...pendingLogProcessingTasks]);
+  }
+}
+
 function todayKstDate() {
   // en-CA 로케일 → "YYYY-MM-DD" (daily_logs.log_date 형식)
   return new Intl.DateTimeFormat("en-CA", {
@@ -636,6 +664,7 @@ async function generatePlaylist() {
   showScreen(screens.indexOf("playlist-loading-screen"));
 
   const date = todayKstDate();
+  await waitForPendingLogProcessing();
   await ensurePlaylistRow(user.id, date);
 
   // 서비스에 그날 로그별 추천 곡 생성 요청 (완료까지 대기 — mood_music_agent가 로그마다 돎).
@@ -767,6 +796,21 @@ async function renderStickerCover(coverEl, dayLogs) {
     coverEl.append(image);
     placed += 1;
   }
+}
+
+async function renderLatestStickerCover(coverEl, userId, date) {
+  if (!sb || !coverEl || !userId || !date) return;
+  const { data, error } = await sb
+    .from("daily_logs")
+    .select("sticker_path")
+    .eq("user_id", userId)
+    .eq("log_date", date)
+    .order("logged_at");
+  if (error) {
+    console.error("스티커 커버 새로고침 실패:", error.message);
+    return;
+  }
+  await renderStickerCover(coverEl, data || []);
 }
 
 function formatDisplayDate(isoDate) {
@@ -1664,6 +1708,12 @@ async function finalizeTodayPlaylist() {
       .eq("user_id", userId)
       .eq("playlist_date", todayKstDate());
     if (error) console.error("플리 제목 저장 실패:", error.message);
+    await waitForPendingLogProcessing();
+    await renderLatestStickerCover(
+      document.querySelector("#playlist-complete-screen .complete-cover"),
+      userId,
+      todayKstDate(),
+    );
   }
   showScreen(screens.indexOf("playlist-complete-screen"));
 }
@@ -1885,11 +1935,13 @@ document.addEventListener("click", (event) => {
   }
   if (action === "save-log") {
     // Supabase 저장 (사진 업로드 + daily_logs insert). 값이 아래에서 초기화되기 전에 넘긴다.
-    saveLog({
-      photo: capturedPhotoDataUrl,
-      caption: pendingNote,
-      emotions: readSelectedEmotions(),
-    });
+    trackLogProcessing(
+      saveLog({
+        photo: capturedPhotoDataUrl,
+        caption: pendingNote,
+        emotions: readSelectedEmotions(),
+      }),
+    );
     logs.push({
       caption: pendingNote,
       photo: capturedPhotoDataUrl,
