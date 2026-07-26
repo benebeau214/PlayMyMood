@@ -7,10 +7,11 @@ function updateAppScale() {
   const root = document.documentElement.style;
 
   if (viewportWidth <= 600) {
-    // 모바일: 화면을 꽉 채운다. 가로·세로를 각각 뷰포트에 맞춰 스케일
-    // (402x874 vs 폰 비율 차이가 미미해서 왜곡은 거의 없음).
-    root.setProperty("--app-scale-x", String(viewportWidth / DESIGN_WIDTH));
-    root.setProperty("--app-scale-y", String(viewportHeight / DESIGN_HEIGHT));
+    // 모바일: 비율 유지하며 화면을 꽉 채운다(cover). 한 축은 정확히 맞고
+    // 넘치는 축의 가장자리만 살짝 잘린다 → 왜곡(찌부) 없음.
+    const scale = Math.max(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
+    root.setProperty("--app-scale-x", String(scale));
+    root.setProperty("--app-scale-y", String(scale));
   } else {
     // 데스크탑: 비율 유지하며 축소(회색 배경 위 폰 프레임). 1을 넘기지 않음.
     const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1);
