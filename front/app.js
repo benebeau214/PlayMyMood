@@ -4,24 +4,14 @@ const DESIGN_HEIGHT = 874;
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
   const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
-  const usesFullMobileWidth = viewportWidth <= 600;
-  const widthScale = viewportWidth / DESIGN_WIDTH;
-  const heightScale = viewportHeight / DESIGN_HEIGHT;
-  const scale = usesFullMobileWidth
-    ? Math.min(widthScale, Math.max(heightScale, Math.min(1, widthScale)))
-    : Math.min(widthScale, heightScale, 1.15);
-  const appWidth = usesFullMobileWidth
-    ? Math.max(DESIGN_WIDTH, viewportWidth / scale)
-    : DESIGN_WIDTH;
-  const appHeight = usesFullMobileWidth
-    ? Math.max(DESIGN_HEIGHT, viewportHeight / scale)
-    : DESIGN_HEIGHT;
+  // 피그마 프레임(402x874)을 그대로 유지한다.
+  // - 두 축 모두에 맞춰 축소하므로 비율이 절대 깨지지 않는다.
+  // - 1을 넘기지 않으므로 오브젝트가 디자인보다 커지지 않는다.
+  const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1);
 
   document.documentElement.style.setProperty("--app-scale", String(scale));
-  document.documentElement.style.setProperty("--app-width", `${appWidth}px`);
-  document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
-  document.documentElement.style.setProperty("--app-side-space", `${Math.max(0, (appWidth - DESIGN_WIDTH) / 2)}px`);
-  document.documentElement.style.setProperty("--app-render-height", `${appHeight * scale}px`);
+  document.documentElement.style.setProperty("--app-width", `${DESIGN_WIDTH}px`);
+  document.documentElement.style.setProperty("--app-height", `${DESIGN_HEIGHT}px`);
 }
 
 updateAppScale();
