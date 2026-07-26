@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Play My Mood</title>
     <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260726-camera-scope" />
+    <link rel="stylesheet" href="./styles.css?v=20260726-responsive-width" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
@@ -270,10 +270,12 @@
 
       <section class="screen note-screen" id="note-screen" aria-label="기록 문장 입력">
         <header class="capture-header centered-only">
+          <button class="back-button" type="button" data-action="back" aria-label="뒤로">←</button>
           <div class="record-title">
             <h1>오늘의 기록</h1>
             <p class="record-date">2026.07.08</p>
           </div>
+          <button class="caption-done-button" type="button" data-action="finish-caption">완료</button>
         </header>
         <div class="note-polaroid">
           <div class="note-photo"></div>
@@ -390,7 +392,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260726-camera-scope"></script>
+    <script src="./app.js?v=20260726-responsive-width"></script>
   </body>
 </html>
 

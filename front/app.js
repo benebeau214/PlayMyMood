@@ -4,8 +4,17 @@ const DESIGN_HEIGHT = 852;
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
   const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
-  const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1.15);
+  const usesFullMobileWidth = viewportWidth <= 600;
+  const scale = usesFullMobileWidth
+    ? viewportWidth / DESIGN_WIDTH
+    : Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1.15);
+  const appHeight = usesFullMobileWidth
+    ? Math.max(DESIGN_HEIGHT, viewportHeight / scale)
+    : DESIGN_HEIGHT;
+
   document.documentElement.style.setProperty("--app-scale", String(scale));
+  document.documentElement.style.setProperty("--app-height", `${appHeight}px`);
+  document.documentElement.style.setProperty("--app-render-height", `${appHeight * scale}px`);
 }
 
 updateAppScale();
@@ -1828,11 +1837,18 @@ function updateCaptionCharacterCount() {
   noteCharacterCount.textContent = `(${limitedValue.length}/${MAX_CAPTION_LENGTH})`;
 }
 
+function finishCaptionEntry() {
+  if (!recordNoteInput) return;
+  pendingNote = recordNoteInput.value.trim().slice(0, MAX_CAPTION_LENGTH);
+  recordNoteInput.blur();
+  showScreen(screens.indexOf("emotion-screen"));
+}
+
 recordNoteInput?.addEventListener("input", updateCaptionCharacterCount);
 recordNoteInput?.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  pendingNote = event.target.value.trim().slice(0, MAX_CAPTION_LENGTH);
-  showScreen(screens.indexOf("emotion-screen"));
+  if (event.key !== "Enter" || event.isComposing) return;
+  event.preventDefault();
+  finishCaptionEntry();
 });
 updateCaptionCharacterCount();
 
@@ -1968,6 +1984,11 @@ document.addEventListener("click", (event) => {
 
   if (action === "capture-photo") {
     capturePhoto();
+    return;
+  }
+
+  if (action === "finish-caption") {
+    finishCaptionEntry();
     return;
   }
 
