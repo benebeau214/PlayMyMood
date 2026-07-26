@@ -70,6 +70,7 @@ const pendingLogProcessingTasks = new Set();
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
 const recordNoteInput = document.getElementById("record-note");
+const noteCharacterCount = document.querySelector(".note-character-count");
 const hitSlider = document.getElementById("hit-slider");
 const hitSliderWrap = document.querySelector(".hit-slider-wrap");
 const cameraVideo = document.getElementById("camera-video");
@@ -109,6 +110,7 @@ let cameraFacingMode = "environment";
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
 let isRetakingPhoto = false;
+const MAX_CAPTION_LENGTH = 30;
 const MAX_EMOTION_SELECTIONS = 9;
 let selectedMoodNotes = [];
 let selectedMoodEmotions = [];
@@ -509,6 +511,37 @@ function emotionNoteSources(emotions = []) {
     .map((emotion) => EMOTION_NOTE_ASSETS[emotion])
     .filter(Boolean)
     .slice(0, MAX_EMOTION_SELECTIONS);
+}
+
+function mostSelectedEmotions(dayLogs = [], limit = 4) {
+  const counts = new Map();
+  let selectionOrder = 0;
+  for (const log of dayLogs) {
+    const emotions = Array.isArray(log?.emotions) ? log.emotions : [];
+    for (const emotion of emotions) {
+      if (!EMOTION_NOTE_ASSETS[emotion]) continue;
+      const current = counts.get(emotion);
+      if (current) current.count += 1;
+      else counts.set(emotion, { emotion, count: 1, firstSelected: selectionOrder });
+      selectionOrder += 1;
+    }
+  }
+  return [...counts.values()]
+    .sort((left, right) => right.count - left.count || left.firstSelected - right.firstSelected)
+    .slice(0, limit);
+}
+
+function renderPlayerMoodNotes(dayLogs = []) {
+  const hero = document.querySelector("#playlist-player-screen .player-hero");
+  if (!hero) return;
+  hero.querySelectorAll(".player-note").forEach((note) => note.remove());
+  mostSelectedEmotions(dayLogs, 4).forEach(({ emotion, count }, index) => {
+    const note = document.createElement("img");
+    note.className = `player-note player-note-${index + 1}`;
+    note.src = EMOTION_NOTE_ASSETS[emotion];
+    note.alt = `${emotion} 감정${count > 1 ? ` ${count}회 선택` : ""}`;
+    hero.append(note);
+  });
 }
 
 function readSelectedEmotions() {
@@ -925,9 +958,7 @@ function flashPreview() {
 function updateCapturedPhotoPreview() {
   if (!notePhoto || !capturedPhotoDataUrl) return;
   notePhoto.classList.add("has-photo");
-  notePhoto.style.backgroundImage = `url("${capturedPhotoDataUrl}")`;
-  notePhoto.style.backgroundSize = "cover";
-  notePhoto.style.backgroundPosition = "center";
+  notePhoto.style.backgroundImage = "none";
   let image = notePhoto.querySelector("img");
   if (!image) {
     image = document.createElement("img");
@@ -943,14 +974,31 @@ function captureCurrentFrame() {
   const sourceWidth = cameraVideo.videoWidth;
   const sourceHeight = cameraVideo.videoHeight;
   if (!sourceWidth || !sourceHeight) return false;
-  const cropWidth = sourceWidth / zoom;
-  const cropHeight = sourceHeight / zoom;
-  const sourceX = (sourceWidth - cropWidth) / 2;
-  const sourceY = (sourceHeight - cropHeight) / 2;
+
+  // Reproduce the preview's `object-fit: cover` and CSS zoom on the canvas.
+  // Cropping the source into a square here used to save areas that were not
+  // visible in the 393 × 402 preview.
+  const previewWidth = cameraPreview?.clientWidth || 393;
+  const previewHeight = cameraPreview?.clientHeight || 402;
   cameraCanvas.width = 1080;
-  cameraCanvas.height = 1080;
+  cameraCanvas.height = Math.round(cameraCanvas.width * (previewHeight / previewWidth));
+
   const context = cameraCanvas.getContext("2d");
-  context.drawImage(cameraVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, cameraCanvas.width, cameraCanvas.height);
+  if (!context) return false;
+
+  const coverScale = Math.max(
+    cameraCanvas.width / sourceWidth,
+    cameraCanvas.height / sourceHeight,
+  );
+  const renderedScale = coverScale * zoom;
+  const renderedWidth = sourceWidth * renderedScale;
+  const renderedHeight = sourceHeight * renderedScale;
+  const renderedX = (cameraCanvas.width - renderedWidth) / 2;
+  const renderedY = (cameraCanvas.height - renderedHeight) / 2;
+
+  context.fillStyle = "#e9e9e9";
+  context.fillRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+  context.drawImage(cameraVideo, renderedX, renderedY, renderedWidth, renderedHeight);
   capturedPhotoDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.9);
   updateCapturedPhotoPreview();
   return true;
@@ -960,13 +1008,10 @@ function capturePhoto() {
   if (flashEnabled) flashPreview();
   const captured = captureCurrentFrame();
   if (!captured) return;
-  const returnToEmotion = isRetakingPhoto;
   isRetakingPhoto = false;
-  showScreen(screens.indexOf(returnToEmotion ? "emotion-screen" : "note-screen"));
-  if (!returnToEmotion) {
-    requestAnimationFrame(updateCapturedPhotoPreview);
-    recordNoteInput?.focus();
-  }
+  showScreen(screens.indexOf("note-screen"));
+  requestAnimationFrame(updateCapturedPhotoPreview);
+  recordNoteInput?.focus();
 }
 function updateEmotionPreview() {
   if (emotionPhotoPreview) {
@@ -980,7 +1025,7 @@ function updateEmotionPreview() {
   }
 
   if (emotionCaptionPreview) {
-    emotionCaptionPreview.textContent = pendingNote || "오늘 감정과 상황을 기록했어요";
+    emotionCaptionPreview.textContent = pendingNote || "";
   }
 }
 function updateHitSlider() {
@@ -1326,12 +1371,15 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
     return;
   }
   const dayLogs = logRows || [];
+  renderPlayerMoodNotes(dayLogs);
 
   // 대표 로그 사진/캡션을 실제 저장 데이터로(새로고침해도 유지되게)
   const first = dayLogs[0];
   if (playerLogPhoto) playerLogPhoto.replaceChildren();
   if (playerLogPhoto) playerLogPhoto.classList.remove("has-photo");
-  if (playerLogCaption) playerLogCaption.textContent = first?.caption || "아직 이 노래와 연결된 로그가 없어요";
+  if (playerLogCaption) {
+    playerLogCaption.textContent = first ? first.caption || "" : "아직 이 노래와 연결된 로그가 없어요";
+  }
   if (first) {
     if (playerLogPhoto) {
       const url = await signedUrl(first.photo_path);
@@ -1447,7 +1495,7 @@ function renderTrackLogStaff(notes = []) {
 function openTrackLog(index) {
   const log = getTrackLog(index);
   if (trackLogDate) trackLogDate.textContent = `${log.date || formatToday()} ${log.time || "16:00"}`;
-  if (trackLogCaption) trackLogCaption.textContent = log.caption || "오늘 감정과 상황을 기록했어요";
+  if (trackLogCaption) trackLogCaption.textContent = log.caption || "";
   renderTrackLogStaff(log.moodNotes || []);
   if (trackLogPhoto) {
     trackLogPhoto.replaceChildren();
@@ -1680,7 +1728,7 @@ function makePolaroid({ index, add = false, log = null }) {
       photo.alt = "기록 사진";
       image.append(photo);
     }
-    caption.textContent = log.caption || "오늘 감정과 상황을 기록했어요";
+    caption.textContent = log.caption || "";
   } else {
     image.innerHTML = '<span class="placeholder-text">지금 순간을<br />기록해보세요</span>';
     caption.textContent = "";
@@ -1773,11 +1821,20 @@ async function renderPolaroids() {
   updateTodayPlaylistButton();
 }
 
+function updateCaptionCharacterCount() {
+  if (!recordNoteInput || !noteCharacterCount) return;
+  const limitedValue = recordNoteInput.value.slice(0, MAX_CAPTION_LENGTH);
+  if (recordNoteInput.value !== limitedValue) recordNoteInput.value = limitedValue;
+  noteCharacterCount.textContent = `(${limitedValue.length}/${MAX_CAPTION_LENGTH})`;
+}
+
+recordNoteInput?.addEventListener("input", updateCaptionCharacterCount);
 recordNoteInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
-  pendingNote = event.target.value.trim();
+  pendingNote = event.target.value.trim().slice(0, MAX_CAPTION_LENGTH);
   showScreen(screens.indexOf("emotion-screen"));
 });
+updateCaptionCharacterCount();
 
 archiveMonthCarousel?.addEventListener("scroll", () => {
   if (archiveCarouselFrame !== null) cancelAnimationFrame(archiveCarouselFrame);
@@ -1915,6 +1972,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "retake-photo") {
+    pendingNote = "";
+    if (recordNoteInput) recordNoteInput.value = "";
+    updateCaptionCharacterCount();
     isRetakingPhoto = true;
     showScreen(screens.indexOf("capture-screen"));
     return;
@@ -1952,6 +2012,7 @@ document.addEventListener("click", (event) => {
     pendingNote = "";
     capturedPhotoDataUrl = "";
     recordNoteInput.value = "";
+    updateCaptionCharacterCount();
     showScreen(screens.indexOf("record-complete-screen"));
     return;
   }

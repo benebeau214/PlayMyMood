@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Play My Mood</title>
     <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260725-repeat-emotions" />
+    <link rel="stylesheet" href="./styles.css?v=20260726-camera-scope" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
@@ -212,10 +212,8 @@
           </div>
           <article class="player-log-polaroid" aria-label="대표 기록">
             <div class="player-log-photo" id="player-log-photo"></div>
-            <p id="player-log-caption">오늘 하루를 기록했어요</p>
+            <p id="player-log-caption"></p>
           </article>
-          <img class="player-note player-note-orange" src="./assets/music-note-orange.png" alt="" />
-          <img class="player-note player-note-yellow" src="./assets/music-note-yellow.png" alt="" />
         </div>
         <h1 class="player-title" id="player-title">커피 맛</h1>
         <section class="player-track-list" aria-label="플리 목록">
@@ -280,7 +278,8 @@
         <div class="note-polaroid">
           <div class="note-photo"></div>
           <label class="input-label" for="record-note">기록 문장</label>
-          <input id="record-note" class="note-input" type="text" placeholder="지금 상황을 짧게 적어볼까요?" />
+          <input id="record-note" class="note-input" type="text" maxlength="30" placeholder="지금 상황을 짧게 적어볼까요?" />
+          <span class="note-character-count" aria-live="polite">(0/30)</span>
         </div>
       </section>
 
@@ -391,7 +390,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260726-sticker-cover-wait"></script>
+    <script src="./app.js?v=20260726-camera-scope"></script>
   </body>
 </html>
 
