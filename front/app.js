@@ -1,5 +1,5 @@
-﻿const DESIGN_WIDTH = 393;
-const DESIGN_HEIGHT = 852;
+﻿const DESIGN_WIDTH = 402;
+const DESIGN_HEIGHT = 874;
 
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
@@ -993,8 +993,8 @@ function captureCurrentFrame() {
 
   // Reproduce the preview's `object-fit: cover` and CSS zoom on the canvas.
   // Cropping the source into a square here used to save areas that were not
-  // visible in the 393 × 402 preview.
-  const previewWidth = cameraPreview?.clientWidth || 393;
+  // visible in the 402 × 402 preview.
+  const previewWidth = cameraPreview?.clientWidth || DESIGN_WIDTH;
   const previewHeight = cameraPreview?.clientHeight || 402;
   cameraCanvas.width = 1080;
   cameraCanvas.height = Math.round(cameraCanvas.width * (previewHeight / previewWidth));

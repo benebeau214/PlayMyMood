@@ -32,13 +32,13 @@
 
 :root {
   --app-bg: #fbf6ea;
-  --design-width: 393;
-  --design-height: 852;
+  --design-width: 402;
+  --design-height: 874;
   --app-scale: 1;
-  --app-width: 393px;
-  --app-height: 852px;
+  --app-width: 402px;
+  --app-height: 874px;
   --app-side-space: 0px;
-  --app-render-height: 852px;
+  --app-render-height: 874px;
   color: #0b0b0b;
   background: #9a9a9a;
   font-family: "Gmarket Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
@@ -758,7 +758,7 @@ h1 {
     bottom: 0;
     left: 50%;
     right: auto;
-    width: 393px;
+    width: 402px;
     transform: translateX(-50%);
   }
 
@@ -3371,13 +3371,13 @@ h1 {
 .onboarding-welcome-screen .welcome-note-orange {
   top: 28px;
 }
-/* Hard-pin welcome start button to bottom of the 393x852 design canvas */
+/* Keep the welcome action aligned to the bottom of the responsive design canvas. */
 .onboarding-welcome-screen .welcome-start-button.next-button {
   position: absolute !important;
   left: 35px !important;
   right: 24px !important;
-  top: 748px !important;
-  bottom: auto !important;
+  top: auto !important;
+  bottom: 53px !important;
   height: 51px;
   z-index: 30;
 }
