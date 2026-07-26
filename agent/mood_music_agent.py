@@ -20,6 +20,8 @@ HTTP_USER_AGENT = "Mozilla/5.0 (compatible; MoodMusicAgent/0.1; +https://reccobe
 RECCOBEATS_TARGET_KEYS = ("valence", "danceability", "energy", "tempo", "popularity")
 LIST_PREFERENCE_KEYS = ("preferred_genres", "avoid_genres", "preferred_artists", "avoid_artists")
 ERA_VALUES = ("2020s", "2010s", "2000s", "pre_2000s")
+PREFERENCE_SEARCH_MAX_ATTEMPTS = 3
+PREFERENCE_SEARCH_MIN_BATCH_SIZE = 12
 
 
 class ConfigurationError(RuntimeError):
@@ -776,24 +778,98 @@ def recommend_music(
     if not seeds:
         raise ReccoBeatsError("Could not resolve any ReccoBeats seed tracks")
 
-    recommendation_size = min(max(limit * 4, limit), 50)
+    needs_preference_filter = _needs_ai_preference_filter(preferences)
+    preference_filter_available = hasattr(claude, "filter_tracks_by_preferences")
+    max_attempts = (
+        PREFERENCE_SEARCH_MAX_ATTEMPTS
+        if needs_preference_filter and preference_filter_available
+        else 1
+    )
+    recommendation_size = min(
+        max(limit * 4, PREFERENCE_SEARCH_MIN_BATCH_SIZE if needs_preference_filter else limit),
+        50,
+    )
     seed_tracks: list[dict[str, Any]] = []
     if hasattr(recco, "get_tracks"):
         try:
             seed_tracks = recco.get_tracks(seeds)
         except Exception as exc:
             warnings.append(f"seed track lookup failed: {exc}")
-    raw_tracks = recco.get_recommendations(seeds, recommendation_size, target_features)
-    raw_tracks = dedupe_tracks(seed_tracks + raw_tracks)
-    track_ids = [str(track["id"]) for track in raw_tracks if isinstance(track.get("id"), str)]
-    audio_features = recco.get_audio_features(track_ids)
-    normalized = [
-        normalize_track(track, profile, warnings, audio_features.get(str(track.get("id")), {}))
-        for track in raw_tracks
-    ]
-    filtered = apply_preference_filters(normalized, preferences, warnings)
-    filtered = apply_ai_preference_filter(filtered, preferences, claude, situation, warnings)
-    ranked = rank_tracks(filtered, target_features, preferences)[:limit]
+
+    if needs_preference_filter and not preference_filter_available:
+        warnings.append("AI preference filter unavailable; returning the best ranked fallback candidate")
+
+    seen_track_ids: set[str] = set()
+    matching_tracks: list[dict[str, Any]] = []
+    fallback_tracks: list[dict[str, Any]] = []
+    attempts_used = 0
+
+    for attempt in range(max_attempts):
+        attempts_used += 1
+        raw_tracks = recco.get_recommendations(seeds, recommendation_size, target_features)
+        if attempt == 0:
+            raw_tracks = seed_tracks + raw_tracks
+        raw_tracks = dedupe_tracks(raw_tracks)
+        new_raw_tracks = [
+            track
+            for track in raw_tracks
+            if isinstance(track.get("id"), str) and str(track["id"]) not in seen_track_ids
+        ]
+        seen_track_ids.update(str(track["id"]) for track in new_raw_tracks)
+
+        if not new_raw_tracks:
+            if attempt + 1 < max_attempts:
+                warnings.append(
+                    f"preference search attempt {attempt + 1} returned no new candidates; retrying"
+                )
+                continue
+            break
+
+        track_ids = [str(track["id"]) for track in new_raw_tracks]
+        audio_features = recco.get_audio_features(track_ids)
+        normalized = [
+            normalize_track(track, profile, warnings, audio_features.get(str(track.get("id")), {}))
+            for track in new_raw_tracks
+        ]
+        eligible_tracks = apply_preference_filters(normalized, preferences, warnings)
+        fallback_tracks = dedupe_tracks(fallback_tracks + eligible_tracks)
+
+        if needs_preference_filter and preference_filter_available:
+            accepted_tracks = apply_ai_preference_filter(
+                eligible_tracks,
+                preferences,
+                claude,
+                situation,
+                warnings,
+            )
+            matching_tracks = dedupe_tracks(matching_tracks + accepted_tracks)
+        elif not needs_preference_filter:
+            matching_tracks = dedupe_tracks(matching_tracks + eligible_tracks)
+
+        if len(matching_tracks) >= limit:
+            break
+        if attempt + 1 < max_attempts:
+            warnings.append(
+                f"preference search attempt {attempt + 1} found "
+                f"{len(matching_tracks)}/{limit} matching track(s); retrying"
+            )
+
+    ranked_matches = rank_tracks(matching_tracks, target_features, preferences)
+    ranked = ranked_matches[:limit]
+    if len(ranked) < limit:
+        matching_ids = {str(track.get("id")) for track in ranked_matches}
+        fallback_pool = [
+            track for track in fallback_tracks if str(track.get("id")) not in matching_ids
+        ]
+        ranked_fallbacks = rank_tracks(fallback_pool, target_features, preferences)
+        fallback_count = min(limit - len(ranked), len(ranked_fallbacks))
+        if fallback_count:
+            ranked.extend(ranked_fallbacks[:fallback_count])
+            if needs_preference_filter:
+                warnings.append(
+                    f"preference_fallback: filled {fallback_count} track(s) with the best ranked "
+                    f"candidate(s) after {attempts_used} search attempt(s)"
+                )
 
     return {
         "mood_profile": profile,
@@ -804,6 +880,9 @@ def recommend_music(
             "seed_track_ids": seeds,
             "reccobeats_target_params": target_features,
             "preferences": preferences,
+            "recommendation_attempts": attempts_used,
+            "evaluated_candidate_count": len(fallback_tracks),
+            "preference_match_count": len(matching_tracks),
         },
         "warnings": warnings,
     }
