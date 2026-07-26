@@ -1419,7 +1419,7 @@ h1 {
   top: 0;
   left: 0;
   right: 0;
-  height: 163px;
+  height: 130px; /* 크림 벽면을 줄여 테이블(브라운)을 더 길게 */
   background: var(--app-bg);
 }
 
@@ -1472,9 +1472,9 @@ h1 {
 }
 
 .scene-camera {
-  left: -43px;
-  top: 222px;
-  width: 230px;
+  left: -38px;
+  top: 200px;
+  width: 265px; /* 카메라를 더 크게(더 보이게) */
 }
 
 .scene-photo-back {
@@ -1492,9 +1492,9 @@ h1 {
 }
 
 .scene-player {
-  left: 74px;
-  top: 537px;
-  width: 361px;
+  left: 60px;
+  top: 545px;
+  width: 405px; /* LP플레이어를 더 크게(더 보이게) */
 }
 
 /* Figma Group 21: x54 y427 157x36 */
