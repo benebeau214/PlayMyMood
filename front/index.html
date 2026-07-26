@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Play My Mood</title>
     <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260726-canvas-402x874" />
+    <link rel="stylesheet" href="./styles.css?v=20260726-polaroid-shorter" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen active login-screen" id="login-screen" aria-label="Play My Mood 로그인">
-        <div class="brand">play my mood</div>
+        <img class="brand-logo" src="./assets/play-my-mood-logo.png" alt="Play My Mood" />
         <button class="spotify-button" type="button" data-action="spotify-login" aria-label="Spotify로 로그인하기">
           <img src="./assets/spotify-login-button.png" alt="" />
         </button>
@@ -275,7 +275,6 @@
             <h1>오늘의 기록</h1>
             <p class="record-date">2026.07.08</p>
           </div>
-          <button class="caption-done-button" type="button" data-action="finish-caption">완료</button>
         </header>
         <div class="note-polaroid">
           <div class="note-photo"></div>
@@ -283,6 +282,7 @@
           <input id="record-note" class="note-input" type="text" maxlength="30" placeholder="지금 상황을 짧게 적어볼까요?" />
           <span class="note-character-count" aria-live="polite">(0/30)</span>
         </div>
+        <button class="caption-next-button" type="button" data-action="finish-caption">다음</button>
       </section>
 
       <section class="screen emotion-screen" id="emotion-screen" aria-label="감정 선택">
@@ -392,7 +392,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260726-canvas-402x874"></script>
+    <script src="./app.js?v=20260726-polaroid-group-gap"></script>
   </body>
 </html>
 

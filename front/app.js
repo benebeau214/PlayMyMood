@@ -1707,18 +1707,18 @@ function removeSelectedEmotion(index) {
 }
 
 function polaroidPosition(index) {
-  const row = Math.floor(index / 4);
+  const group = Math.floor(index / 4);
   const layouts = [
-    { left: -18, top: 10, rotate: -15 },
-    { left: 180, top: 118, rotate: -12 },
-    { left: -9, top: 338, rotate: 5 },
-    { left: 168, top: 438, rotate: -12 },
+    { left: 25, top: 45, rotate: 10 },
+    { left: 145, top: 180, rotate: -7 },
+    { left: 25, top: 385, rotate: 6 },
+    { left: 145, top: 520, rotate: -7 },
   ];
-  const base = layouts[index % layouts.length];
+  const layout = layouts[index % layouts.length];
   return {
-    left: base.left,
-    top: base.top + row * 720,
-    rotate: base.rotate,
+    left: layout.left,
+    top: layout.top + group * 675,
+    rotate: layout.rotate,
   };
 }
 
@@ -1742,6 +1742,7 @@ function makePolaroid({ index, add = false, log = null }) {
     image.innerHTML = '<span class="add-mark">+</span><span class="add-text">기록하기</span>';
     caption.textContent = "";
   } else if (log) {
+    card.setAttribute("aria-label", log.caption ? `기록: ${log.caption}` : "기록 사진");
     if (log.photo) {
       const photo = document.createElement("img");
       photo.src = log.photo;
@@ -1760,6 +1761,17 @@ function makePolaroid({ index, add = false, log = null }) {
 
   card.append(image, caption, time);
   return card;
+}
+
+function bringPolaroidToFront(card) {
+  const board = card?.closest(".polaroid-board");
+  if (!board || !card.classList.contains("log-polaroid")) return;
+  const cards = [...board.querySelectorAll(".polaroid")];
+  cards.forEach((item, index) => {
+    const isFront = item === card;
+    item.classList.toggle("is-front", isFront);
+    item.style.zIndex = String(isFront ? cards.length + 1 : index + 1);
+  });
 }
 
 async function finalizeTodayPlaylist() {
@@ -1833,9 +1845,10 @@ async function renderPolaroids() {
   }
   board.appendChild(makePolaroid({ index: addIndex, add: true }));
 
-  const rows = Math.ceil(totalCards / 4);
-  board.style.minHeight = `${Math.max(760, rows * 720 + 120)}px`;
-  polaroidList.classList.toggle("scrollable", logs.length >= 4);
+  const lastPosition = polaroidPosition(totalCards - 1);
+  const boardHeight = Math.max(760, lastPosition.top + 315);
+  board.style.minHeight = `${boardHeight}px`;
+  polaroidList.classList.toggle("scrollable", boardHeight > 760);
   polaroidList.appendChild(board);
   playlistButton.classList.add("visible");
   updateTodayPlaylistButton();
@@ -1901,6 +1914,11 @@ document.addEventListener("click", (event) => {
   const target = event.target.closest("[data-action], button");
   if (!target) return;
   const action = target.dataset.action;
+
+  if (target.classList.contains("log-polaroid")) {
+    bringPolaroidToFront(target);
+    return;
+  }
 
   if (action === "spotify-login") {
     loginWithSpotify();

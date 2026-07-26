@@ -90,20 +90,23 @@ button, input { font: inherit; }
   justify-content: center;
 }
 
-.brand {
+.brand-logo {
   position: absolute;
-  top: 34.5%;
+  top: 220px;
   left: 50%;
   transform: translateX(-50%);
-  width: max-content;
-  font-size: 2rem;
-  font-weight: 400;
-  letter-spacing: 0;
+  width: 325px;
+  height: 345px;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
 }
 
 .spotify-button {
   position: absolute;
-  top: 58.8%;
+  top: auto;
+  bottom: 230px;
   left: 50%;
   transform: translateX(-50%);
   width: 361px;
@@ -1003,19 +1006,20 @@ h1 {
   color: #c5c5c5;
 }
 
-.caption-done-button {
+.caption-next-button {
   position: absolute;
-  right: 18px;
-  top: 53px;
-  width: 74px;
-  height: 32px;
+  left: 20px;
+  right: 20px;
+  bottom: 53px;
+  width: auto;
+  height: 57px;
   border: 0;
-  border-radius: 18px;
+  border-radius: 10px;
   background: #5b5b5b;
   color: #fff;
   font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 400;
   cursor: pointer;
 }
 
@@ -1780,7 +1784,7 @@ h1 {
 /* Code-built polaroids for today's record page */
 .record-page-screen .polaroid {
   width: 228px;
-  height: 289px;
+  height: 265px;
   padding: 13px 12px 48px;
   border: 0;
   background: #fff;
@@ -1816,19 +1820,34 @@ h1 {
 .record-page-screen .polaroid-caption {
   left: 13px;
   right: 13px;
-  bottom: 16px;
+  bottom: 13px;
+  min-height: 33px;
   color: #111;
   font-family: "Kyobo Handwriting 2021", cursive;
   font-weight: 400;
   display: -webkit-box;
   font-size: 12px;
-  line-height: 1.25;
+  line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
+  word-break: break-word;
   text-overflow: clip;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   transform: none;
+}
+
+.record-page-screen .log-polaroid {
+  cursor: pointer;
+}
+
+.record-page-screen .log-polaroid.is-front {
+  filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.28));
+}
+
+.record-page-screen .log-polaroid:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 3px;
 }
 
 .record-page-screen .placeholder-text {
