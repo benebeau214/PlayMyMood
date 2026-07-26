@@ -32,13 +32,13 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(AGENT_DIR))
 
-from mood_intake_agent import (  # noqa: E402
+from mood_intake_agent import (  
     CUSTOM_EMOTION_LABELS,
     EmotionLog,
     analyze_daily_logs,
 )
-import mood_music_agent as music_agent  # noqa: E402
-from mood_music_agent import (  # noqa: E402
+import mood_music_agent as music_agent  
+from mood_music_agent import (  
     DEFAULT_CLAUDE_MODEL,
     ConfigurationError,
     ModelOutputError,
