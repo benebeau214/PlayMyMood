@@ -69,6 +69,7 @@ class ImageEmojiPipelineTests(unittest.TestCase):
                 result = run_image_emoji_pipeline(
                     image_path=image_path,
                     text="행궁동 나들이",
+                    style_variant="hip",
                     output_dir=Path(temp_dir) / "stickers",
                     intake_client=FakeIntakeClient(),
                     sticker_client=object(),
@@ -77,7 +78,9 @@ class ImageEmojiPipelineTests(unittest.TestCase):
 
         sticker_inputs = generate.call_args.args[0]
         self.assertIn("징검다리", sticker_inputs[0]["text"])
-        self.assertEqual(sticker_inputs[0]["emotions"]["calm"], 0.86)
+        self.assertEqual(sticker_inputs[0]["emotions"]["calm"], 0.9)
+        self.assertEqual(generate.call_args.kwargs["style_variant"], "hip")
+        self.assertEqual(result["input"]["style_variant"], "hip")
         self.assertEqual(result["sticker_agent_inputs"], sticker_inputs)
         self.assertEqual(result["sticker_result"], expected_sticker_result)
 

@@ -21,9 +21,18 @@ REPLICATE_MODEL = "google/nano-banana-2"
 REPLICATE_PREDICTIONS_URL = (
     "https://api.replicate.com/v1/models/google/nano-banana-2/predictions"
 )
-DEFAULT_STYLE_REFERENCE = (
-    Path(__file__).resolve().parent / "assets" / "emoji_sticker_style_reference.png"
-)
+ASSET_DIR = Path(__file__).resolve().parent / "assets"
+DEFAULT_STYLE_VARIANT = "soft"
+STYLE_VARIANTS = ("soft", "hip")
+STYLE_REFERENCES = {
+    "soft": ASSET_DIR / "emoji_sticker_style_reference_soft.png",
+    "hip": ASSET_DIR / "emoji_sticker_style_reference_hip.png",
+}
+STYLE_OUTLINE_COLORS = {
+    "soft": "#52463D",
+    "hip": "#4A4052",
+}
+DEFAULT_STYLE_REFERENCE = STYLE_REFERENCES[DEFAULT_STYLE_VARIANT]
 MAX_LOGS = 20
 
 
@@ -146,7 +155,32 @@ def normalize_sticker_briefs(
         emotion_label = str(raw_brief.get("emotion_label") or "").strip()
         eye_shape = str(raw_brief.get("eye_shape") or "").strip()
         mouth_shape = str(raw_brief.get("mouth_shape") or "").strip()
+        if any(
+            token in eye_shape.lower()
+            for token in ("wide", "staring", "bulging", "sclera", "eye whites", "circle eyes")
+        ):
+            eye_shape = "tiny gently tilted dot eyes"
+        if any(
+            token in mouth_shape.lower()
+            for token in ("open", "o-shaped", "o shaped", "screaming", "teeth", "fang", "gaping")
+        ):
+            mouth_shape = "tiny closed softly curved mouth"
         accent = str(raw_brief.get("accent") or "none").strip()
+        if any(
+            token in accent.lower()
+            for token in (
+                "exclamation",
+                "question mark",
+                "z mark",
+                "zzz",
+                "letter",
+                "number",
+                "punctuation",
+                "word",
+                "text",
+            )
+        ):
+            accent = "none"
         raw_intensity = raw_brief.get("emotion_intensity")
         if not isinstance(raw_intensity, int | float) or not 0.0 <= float(raw_intensity) <= 1.0:
             raise ModelOutputError(f"invalid emotion_intensity for log '{log_id}'")
@@ -262,36 +296,48 @@ class AnthropicStickerClient:
             "max_tokens": 1800,
             "temperature": 0.4,
             "system": (
-                "You turn daily-life logs into simple, immediately recognizable emoji-sticker "
-                "concepts. Create exactly one distinct concept per log. Return only one JSON object."
+                "You turn daily-life logs into cute, friendly hand-drawn illustration-sticker concepts "
+                "for a scrapbook or diary album. Keep each concept simple, gentle, and immediately "
+                "recognizable. Create exactly one distinct concept per log. Return only one JSON object."
             ),
             "messages": [
                 {
                     "role": "user",
                     "content": (
-                        "Choose one concrete visual symbol for each log. The symbol should capture the "
-                        "specific event before the general emotion: for example, an umbrella for a rainy "
-                        "walk, a cup for a cafe visit, or a shoe for a run. Give that object a minimal "
-                        "emoji face whose expression accurately reflects the log. Do not sanitize negative, "
-                        "mixed, tired, anxious, angry, or neutral emotions into happiness. Choose an explicit "
-                        "dominant emotion, intensity from 0.0 to 1.0, eye shape, mouth shape, and at most one "
-                        "small emotion accent. Use downturned or flat mouths, uneven or half-closed eyes, angled "
-                        "brows, a single tear, or a sweat drop when appropriate; use a smile only when the log "
-                        "is genuinely joyful. Avoid abstract scenes, multiple "
-                        "objects, text, brands, copyrighted characters, and music-note symbols.\n\n"
+                        "Choose one concrete central visual symbol for each log. Prefer the specific event "
+                        "over a generic emotion: for example, an umbrella for a rainy walk, a cup for a cafe "
+                        "visit, or a running shoe for a run. The symbol may be an object, plant, animal, or "
+                        "simple mascot, but do not default every log to a cute animal. Add a minimal face only "
+                        "when it clearly helps communicate the emotion; otherwise return 'none' for both eye "
+                        "shape and mouth shape. "
+                        "Do not sanitize negative, mixed, tired, anxious, angry, or neutral emotions into "
+                        "happiness, but express them in a soft, endearing way rather than an intense or "
+                        "frightening way. "
+                        "Choose an explicit dominant emotion, intensity from 0.0 to 1.0, eye shape, mouth "
+                        "shape, and at most one small emotion accent. If a face is used, keep it tiny and "
+                        "friendly with dot eyes or short curved eyes and a small closed mouth. For tired, "
+                        "worried, angry, or surprised emotions, use gently drooping or tilted features instead "
+                        "of wide staring eyes or a screaming mouth. Never use visible eye whites, bulging eyes, "
+                        "large open mouths, exposed teeth, sharply furrowed brows, sinister expressions, or "
+                        "horror imagery. Emotion accents must be pictorial shapes such as a raindrop, sparkle, "
+                        "or sweat drop; never use alarm punctuation, question punctuation, sleep-letter glyphs, "
+                        "letters, numbers, or words as accents. Avoid complex scenes, multiple focal objects, text, brands, "
+                        "copyrighted characters, and decorative music-note symbols unless the log itself is "
+                        "explicitly about music.\n\n"
                         "Choose two distinct flat colors that suit the event and emotion. Colors may vary "
                         "widely between logs: rain can use blues, a cafe can use warm browns or oranges, "
                         "exercise can use greens, and celebration can use vivid pinks or reds. Keep both "
-                        "colors saturated or mid-tone enough for a black face to remain readable; never "
+                        "colors saturated or mid-tone enough for dark ink details to remain readable; never "
                         "choose near-white or near-black. Return both as six-digit hex colors and briefly "
                         "explain the choice in Korean.\n\n"
                         f"Logs JSON: {json.dumps(logs, ensure_ascii=False, sort_keys=True)}\n\n"
                         "Return exactly this shape: {\"stickers\":[{\"log_id\":\"...\","
-                        "\"concept\":\"short Korean description\",\"symbol\":\"specific object in English\","
+                        "\"concept\":\"short Korean description\","
+                        "\"symbol\":\"specific central object or simple mascot in English\","
                         "\"emotion_label\":\"dominant emotion in Korean\",\"emotion_intensity\":0.0,"
-                        "\"eye_shape\":\"specific simple eye shape in English\","
-                        "\"mouth_shape\":\"specific simple mouth shape in English\","
-                        "\"accent\":\"one small black emotion accent in English or none\","
+                        "\"eye_shape\":\"specific simple eye shape in English or none\","
+                        "\"mouth_shape\":\"specific simple mouth shape in English or none\","
+                        "\"accent\":\"one small pictorial emotion accent in English or none; never text or punctuation\","
                         "\"primary_color\":\"#RRGGBB\",\"secondary_color\":\"#RRGGBB\","
                         "\"color_rationale\":\"short Korean explanation\"}]}"
                     ),
@@ -317,27 +363,74 @@ class AnthropicStickerClient:
         return normalize_sticker_briefs(extract_json_object("\n".join(text_parts)), logs)
 
 
-def build_sticker_prompt(brief: dict[str, Any]) -> str:
-    shading = derive_shading_colors(brief["primary_color"])
+def build_sticker_prompt(
+    brief: dict[str, Any],
+    style_variant: str = DEFAULT_STYLE_VARIANT,
+) -> str:
+    if style_variant not in STYLE_VARIANTS:
+        raise ValueError(f"unsupported style variant: {style_variant}")
+    has_face = (
+        str(brief["eye_shape"]).strip().lower() != "none"
+        and str(brief["mouth_shape"]).strip().lower() != "none"
+    )
+    if has_face:
+        face_instruction = (
+            f"Use {brief['eye_shape']} for the eyes and {brief['mouth_shape']} for the mouth. "
+            "Keep the facial marks tiny, softly curved, friendly, and subordinate to the main symbol. "
+            "Use no visible eye whites, bulging or staring eyes, large open mouth, exposed teeth, or "
+            "aggressive brows. "
+            "Do not default to a smile when the specified mouth or emotion is neutral or negative. "
+        )
+    else:
+        face_instruction = (
+            "Do not add a face, eyes, or mouth; communicate the mood through the symbol's shape, "
+            "pose, and color only. "
+        )
+    if style_variant == "soft":
+        style_instruction = (
+            "Match the reference's cute hand-drawn sticker illustration language for a scrapbook or diary "
+            "album: a compact, soft, rounded silhouette; simplified hand-drawn geometry; gently wobbly "
+            "curves; thin-to-medium warm-charcoal or deep colored-pencil outlines; and cozy matte "
+            "gouache-like color blocks. "
+            f"Use an exact {brief['primary_color']} main color and one clear "
+            f"{brief['secondary_color']} secondary color, plus warm charcoal and white only. Add only a "
+            "light paper-grain or colored-pencil texture inside the colored shapes, with clean continuous "
+            "fills and no harsh scratches, distressed holes, dirty speckles, or grunge. "
+            "The result should feel warm, playful, approachable, and cute without looking babyish. "
+        )
+    else:
+        style_instruction = (
+            "Match the reference's hip indie-zine, record-shop, and street-culture sticker language: a bold "
+            "compact silhouette with rounded corners; playful asymmetry; medium-weight muted deep-plum "
+            "contours; flat two-color risograph or screen-print layers; small sparse halftone clusters; and a "
+            "controlled slightly misregistered color edge. Keep the geometry gently softened and leave a "
+            "little breathing room between details so the image feels friendly at first glance. "
+            f"Use an exact {brief['primary_color']} main color and one punchy "
+            f"{brief['secondary_color']} secondary color, plus muted deep-plum ink and white only. Keep the "
+            "texture intentional and graphic, with crisp shapes and restrained print grain rather than dirty "
+            "grunge or damaged surfaces. Avoid heavy all-around black contours, sharp comic-burst geometry, "
+            "or abrupt black-white contrast. The result should feel witty, current, collectible, and "
+            "effortlessly cool, but with a slightly softer and more approachable finish, without becoming "
+            "aggressive, scary, luxury, corporate, or childish. "
+        )
     return (
         "Use the provided image only as a visual style reference, never as a shape or subject reference. "
-        f"Create a brand-new emoji sticker representing {brief['concept']}, using the clear silhouette "
-        f"of one {brief['symbol']}. The face must visibly communicate {brief['emotion_label']} at "
-        f"{brief['emotion_intensity']:.2f} emotional intensity. Use {brief['eye_shape']} for the eyes and "
-        f"{brief['mouth_shape']} for the mouth, placed naturally on the object's main surface. Add "
-        f"{brief['accent']} as the only optional emotion accent. Do not default to a smile when the specified "
-        "mouth or emotion is neutral or negative. Draw every facial feature as a bold, minimal black vector "
-        "shape. Match the reference's "
-        "flat 2D vector-like drawing language: a rounded organic silhouette with no outer outline, an exact "
-        f"{brief['primary_color']} main fill, one crisp {brief['secondary_color']} secondary color region, "
-        f"one flat {shading['highlight_color']} highlight region on the upper-left-facing surface, and one "
-        f"flat {shading['shadow_color']} shadow region on the lower-right-facing surface. Use a consistent "
-        "top-left light direction and crisp cel-shading boundaries. Keep the highlight and shadow broad and "
-        "simple, never glossy or realistic. Use smooth clean edges and "
-        "bold minimal geometry. Keep every color region completely flat, with blank graphic surfaces and "
-        "no letters, numbers, logos, gradients, lighting effects, shadows, texture, or 3D volume. The new "
-        "silhouette is based only on the log-specific object and is wholly distinct from the musical-note "
-        "shape in the reference. Place one large centered sticker on a square canvas with generous padding. "
+        f"Create a brand-new illustrated die-cut sticker representing {brief['concept']} with one bold, "
+        f"log-specific central symbol: {brief['symbol']}. It must communicate "
+        f"{brief['emotion_label']} at {brief['emotion_intensity']:.2f} emotional intensity. "
+        f"{face_instruction}Add {brief['accent']} as the only optional small accent. "
+        "Emotion accents must remain purely pictorial; do not render alarm punctuation, question punctuation, "
+        "sleep-letter glyphs, letters, numbers, or words. "
+        f"{style_instruction}Keep the symbol crisp and immediately readable at emoji size. "
+        "This is one standalone sticker, never an "
+        "album cover, poster, label, package, or multi-object scene. Surround the complete silhouette with "
+        "one smooth opaque white die-cut sticker border and a very soft thin pale-gray separation edge so the "
+        "border remains distinct from the white canvas. Use no text, letters, numbers, punctuation, captions, "
+        "speech bubbles, logos, brands, signatures, or watermarks anywhere. Do not add typography-like marks, "
+        "fake labels, interface symbols, barcodes, or decorative writing. Avoid glossy rendering, gradients, "
+        "realistic lighting, smooth corporate vector polish, 3D volume, photorealistic texture, black-heavy "
+        "artwork, sharp threatening shapes, grotesque distortion, horror, or edgy band-merch styling. "
+        "Place one large centered sticker on a square canvas with generous padding. "
         "The entire area outside the sticker is one perfectly uniform pure white (#FFFFFF) field, edge to edge. "
         "Render the background as actual solid white pixels, never as a transparency checkerboard or pattern."
     )
@@ -442,6 +535,7 @@ def apply_sticker_palette(
     secondary_color: str,
     highlight_color: str | None = None,
     shadow_color: str | None = None,
+    outline_color: str = STYLE_OUTLINE_COLORS[DEFAULT_STYLE_VARIANT],
 ) -> str:
     try:
         from PIL import Image
@@ -450,7 +544,9 @@ def apply_sticker_palette(
 
     shading = derive_shading_colors(primary_color)
     palette = [
-        (0, 0, 0),
+        _hex_to_rgb(outline_color),
+        (210, 210, 210),
+        (255, 255, 255),
         _hex_to_rgb(primary_color),
         _hex_to_rgb(secondary_color),
         _hex_to_rgb(highlight_color or shading["highlight_color"]),
@@ -565,13 +661,17 @@ class ReplicateStickerClient:
 def generate_log_stickers(
     raw_logs: list[Any],
     *,
-    style_reference: str | os.PathLike[str] = DEFAULT_STYLE_REFERENCE,
+    style_variant: str = DEFAULT_STYLE_VARIANT,
+    style_reference: str | os.PathLike[str] | None = None,
     output_dir: str | os.PathLike[str] | None = "generated_stickers",
     claude_client: Any | None = None,
     image_client: Any | None = None,
 ) -> dict[str, Any]:
+    if style_variant not in STYLE_VARIANTS:
+        raise ValueError(f"unsupported style variant: {style_variant}")
     logs = normalize_logs(raw_logs)
-    reference_uri = reference_image_uri(style_reference)
+    resolved_style_reference = style_reference or STYLE_REFERENCES[style_variant]
+    reference_uri = reference_image_uri(resolved_style_reference)
     claude = claude_client or AnthropicStickerClient()
     briefs = normalize_sticker_briefs(claude.create_sticker_briefs(logs), logs)
     replicate = image_client or ReplicateStickerClient()
@@ -580,7 +680,7 @@ def generate_log_stickers(
     stickers: list[dict[str, Any]] = []
     for index, (log, brief) in enumerate(zip(logs, briefs, strict=True), start=1):
         shading = derive_shading_colors(brief["primary_color"])
-        image_prompt = build_sticker_prompt(brief)
+        image_prompt = build_sticker_prompt(brief, style_variant=style_variant)
         image_url = replicate.generate_image(image_prompt, reference_uri)
         local_path = None
         if output_path:
@@ -595,6 +695,7 @@ def generate_log_stickers(
                 brief["secondary_color"],
                 shading["highlight_color"],
                 shading["shadow_color"],
+                STYLE_OUTLINE_COLORS[style_variant],
             )
         stickers.append(
             {
@@ -620,7 +721,8 @@ def generate_log_stickers(
 
     return {
         "stickers": stickers,
-        "style_reference": str(style_reference),
+        "style_variant": style_variant,
+        "style_reference": str(resolved_style_reference),
         "sources": {
             "claude_model": getattr(claude, "model", "injected-client"),
             "image_model": getattr(replicate, "model", "injected-client"),
@@ -654,9 +756,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--logs-json", help="Optional path to a JSON list of structured logs.")
     parser.add_argument(
+        "--style",
+        default=DEFAULT_STYLE_VARIANT,
+        choices=STYLE_VARIANTS,
+        help="Built-in sticker style variant.",
+    )
+    parser.add_argument(
         "--style-reference",
-        default=str(DEFAULT_STYLE_REFERENCE),
-        help="Local path, URL, or data URL for the visual style reference.",
+        default="",
+        help="Optional local path, URL, or data URL overriding the selected style's reference.",
     )
     parser.add_argument("--output-dir", default="generated_stickers")
     return parser
@@ -671,7 +779,8 @@ def main(argv: list[str] | None = None) -> int:
             logs.extend(load_logs_json(args.logs_json))
         result = generate_log_stickers(
             logs,
-            style_reference=args.style_reference,
+            style_variant=args.style,
+            style_reference=args.style_reference or None,
             output_dir=args.output_dir,
         )
     except (

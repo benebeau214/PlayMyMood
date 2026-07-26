@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from agent.emoji_sticker_agent import (
-    DEFAULT_STYLE_REFERENCE,
+    DEFAULT_STYLE_VARIANT,
+    STYLE_VARIANTS,
     ApiRequestError,
     ConfigurationError as StickerConfigurationError,
     ImageGenerationError,
@@ -70,7 +71,8 @@ def run_image_emoji_pipeline(
     image_path: str | os.PathLike[str],
     text: str,
     selected_emotion_label: str = "",
-    style_reference: str | os.PathLike[str] = DEFAULT_STYLE_REFERENCE,
+    style_variant: str = DEFAULT_STYLE_VARIANT,
+    style_reference: str | os.PathLike[str] | None = None,
     output_dir: str | os.PathLike[str] = "generated_stickers",
     intake_client: Any | None = None,
     sticker_client: Any | None = None,
@@ -100,6 +102,7 @@ def run_image_emoji_pipeline(
     sticker_inputs = build_sticker_agent_inputs(intake_result)
     sticker_result = generate_log_stickers(
         sticker_inputs,
+        style_variant=style_variant,
         style_reference=style_reference,
         output_dir=output_dir,
         claude_client=sticker_client,
@@ -110,6 +113,7 @@ def run_image_emoji_pipeline(
             "image_path": str(resolved_image),
             "text": normalized_text,
             "selected_emotion_label": selected_emotion_label,
+            "style_variant": style_variant,
         },
         "intake_result": intake_result,
         "sticker_agent_inputs": sticker_inputs,
@@ -130,9 +134,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Optional user-selected emotion label.",
     )
     parser.add_argument(
+        "--style",
+        default=DEFAULT_STYLE_VARIANT,
+        choices=STYLE_VARIANTS,
+        help="Built-in sticker style variant.",
+    )
+    parser.add_argument(
         "--style-reference",
-        default=str(DEFAULT_STYLE_REFERENCE),
-        help="Style reference passed to the emoji sticker agent.",
+        default="",
+        help="Optional style reference overriding the selected built-in style.",
     )
     parser.add_argument("--output-dir", default="generated_stickers")
     parser.add_argument("--output-json", default="")
@@ -146,7 +156,8 @@ def main(argv: list[str] | None = None) -> int:
             image_path=args.image,
             text=args.text,
             selected_emotion_label=args.emoji,
-            style_reference=args.style_reference,
+            style_variant=args.style,
+            style_reference=args.style_reference or None,
             output_dir=args.output_dir,
         )
         output_text = json.dumps(result, ensure_ascii=False, indent=2)
