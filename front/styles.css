@@ -1603,7 +1603,7 @@ h1 {
   left: 93px;
   top: 106px;
   width: 215px;
-  height: 252px;
+  height: 250px;
   padding: 14px 9px 31px;
   background: #fff;
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.22);
@@ -1611,7 +1611,7 @@ h1 {
 
 .emotion-photo-preview {
   width: 100%;
-  height: 200px;
+  height: 197px;
   overflow: hidden;
   background: #e9e9e9;
 }
@@ -1648,12 +1648,17 @@ h1 {
   margin: 0;
   color: #111;
   font-family: "Kyobo Handwriting 2021", cursive;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.3;
-  white-space: nowrap;
+  display: -webkit-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .emotion-staff {
@@ -1773,6 +1778,8 @@ h1 {
   box-shadow: 0 3px 7px rgba(0, 0, 0, 0.22);
   filter: none;
   overflow: visible;
+  font: inherit;
+  text-align: left;
 }
 
 .record-page-screen .polaroid-image {
@@ -1825,6 +1832,102 @@ h1 {
 
 .record-page-screen .log-polaroid.is-front {
   filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.28));
+}
+
+.polaroid-delete-button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 4;
+  display: none;
+  min-width: 46px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  background: rgba(251, 246, 234, 0.24);
+  color: rgba(17, 17, 17, 0.84);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.record-page-screen .log-polaroid.is-front .polaroid-delete-button {
+  display: block;
+}
+
+.delete-log-modal[hidden] {
+  display: none;
+}
+
+.delete-log-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(244, 238, 227, 0.72);
+}
+
+.delete-log-dialog {
+  position: relative;
+  width: min(300px, calc(100% - 48px));
+  min-height: 0;
+  padding: 48px 20px 20px;
+  border-radius: 14px;
+  background: #ede4d0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.delete-log-dialog p {
+  margin: 0;
+  color: #111;
+  font-size: 1rem;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.delete-log-close {
+  position: absolute;
+  right: 15px;
+  top: 12px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.delete-log-confirm {
+  display: block;
+  min-width: 110px;
+  height: 42px;
+  margin: 18px auto 0;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 8px;
+  background: #5b5b5b;
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-log-confirm[hidden] {
+  display: none;
 }
 
 .record-page-screen .log-polaroid:focus-visible {
@@ -2590,10 +2693,10 @@ h1 {
   position: absolute;
   left: 50%;
   top: 100px;
-  width: 246px;
-  height: 295px;
+  width: 228px;
+  height: 265px;
   margin: 0;
-  padding: 13px 13px 42px;
+  padding: 13px 12px 48px;
   background: #fffdf8;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.22);
   transform: translateX(-50%);
@@ -2601,7 +2704,7 @@ h1 {
 
 .track-log-photo {
   width: 100%;
-  height: 220px;
+  height: 204px;
   background: #e5e5e5;
   overflow: hidden;
 }
@@ -2614,15 +2717,25 @@ h1 {
 }
 
 .track-log-caption {
-  margin: 12px 0 0;
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: 13px;
+  min-height: 33px;
+  margin: 0;
   color: #111;
   font-family: "Kyobo Handwriting 2021", cursive;
   font-weight: 400;
-  font-size: 15px;
-  line-height: 1.25;
-  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.35;
+  display: -webkit-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .track-log-card h2 {
@@ -3109,17 +3222,31 @@ h1 {
   left: 30px;
   top: 107px;
   width: 148px;
-  height: 190px;
-  padding: 9px 9px 34px;
+  height: 172px;
+  padding: 9px 9px 31px;
 }
 
 .playlist-player-screen .player-log-photo {
-  height: 146px;
+  height: 132px;
 }
 
 .playlist-player-screen .player-log-polaroid p {
-  margin-top: 8px;
-  font-size: 0.46rem;
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 8px;
+  min-height: 18px;
+  margin: 0;
+  font-size: 0.44rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 /* Compact modal when opened from the playlist player screen */
 .track-log-modal.player-log-modal .track-log-card {
@@ -3134,19 +3261,18 @@ h1 {
 
 .track-log-modal.player-log-modal .track-log-polaroid {
   top: 58px;
-  width: 260px;
-  height: 340px;
-  padding: 10px 10px 70px;
+  width: 228px;
+  height: 265px;
+  padding: 13px 12px 48px;
 }
 
 .track-log-modal.player-log-modal .track-log-photo {
-  height: 215px;
+  height: 204px;
 }
 
 .track-log-modal.player-log-modal .track-log-caption {
-  margin-top: 7px;
-  font-size: 15px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
   word-break: break-word;

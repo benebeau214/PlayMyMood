@@ -50,6 +50,7 @@ const screens = [
 
 let currentIndex = 0;
 const logs = [];
+let pendingDeleteLog = null;
 // 트랙 "•••" 로그 팝업용: 화면에 마지막으로 그려진 트랙 목록의 실제 사진/캡션/날짜.
 // (오늘/아카이브 어느 날짜를 보고 있든 항상 그 화면이 채운 값을 그대로 씀)
 let currentTrackLogs = [];
@@ -106,6 +107,9 @@ const pendingLogProcessingTasks = new Set();
 const appShell = document.querySelector(".app-shell");
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
+const deleteLogModal = document.getElementById("delete-log-modal");
+const deleteLogMessage = document.getElementById("delete-log-message");
+const deleteLogConfirm = document.querySelector(".delete-log-confirm");
 const recordNoteInput = document.getElementById("record-note");
 const noteCharacterCount = document.querySelector(".note-character-count");
 const hitSlider = document.getElementById("hit-slider");
@@ -150,7 +154,7 @@ let activeCameraIsFront = false;
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
 let isRetakingPhoto = false;
-const MAX_CAPTION_LENGTH = 30;
+const MAX_CAPTION_LENGTH = 48;
 const MAX_EMOTION_SELECTIONS = 9;
 let selectedMoodNotes = [];
 let selectedMoodEmotions = [];
@@ -856,7 +860,11 @@ async function renderPlaylistEdit(userId, date = todayKstDate()) {
     console.error("플리 편집 로드 실패:", error.message);
     return;
   }
-  const dayLogs = logRows || [];
+  // 플레이리스트 화면에는 실제 추천 트랙이 생성된 로그만 포함한다.
+  // 플레이리스트 생성 후 새로 추가된 로그는 tracks가 없으므로 오늘의 기록에만 남는다.
+  const dayLogs = (logRows || []).filter((log) => (
+    Array.isArray(log.tracks) ? log.tracks.length > 0 : Boolean(log.tracks)
+  ));
 
   const dateEl = document.querySelector("#playlist-edit-screen .playlist-date");
   if (dateEl) dateEl.textContent = formatToday();
@@ -1249,11 +1257,7 @@ function renderArchiveShelves() {
   const shelves = document.querySelectorAll(".archive-shelf");
   shelves.forEach((shelf, monthIndex) => {
     shelf.replaceChildren();
-    const month = monthIndex + 1;
-    const actualCount = archiveMonthCounts[monthIndex] || 0;
-    const testCount = ARCHIVE_LP_TEST_COUNTS[month] || 0;
-    const count = Math.max(actualCount, testCount);
-    shelf.classList.toggle("test-lp-layout", testCount > actualCount);
+    const count = archiveMonthCounts[monthIndex] || 0;
     shelf.classList.toggle("empty", count === 0);
     const lpWidth = 7;
     const lpHeight = 120;
@@ -2129,8 +2133,14 @@ function polaroidPosition(index) {
 
 function makePolaroid({ index, add = false, log = null }) {
   const pos = polaroidPosition(index);
-  const card = document.createElement("button");
-  card.type = "button";
+  const card = document.createElement(add ? "button" : "article");
+  if (add) {
+    card.type = "button";
+  } else {
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.dataset.action = "select-log-polaroid";
+  }
   card.className = add ? "polaroid add-polaroid" : "polaroid log-polaroid";
   card.style.left = `${pos.left}px`;
   card.style.top = `${pos.top}px`;
@@ -2147,6 +2157,8 @@ function makePolaroid({ index, add = false, log = null }) {
     image.innerHTML = '<span class="add-mark">+</span><span class="add-text">기록하기</span>';
     caption.textContent = "";
   } else if (log) {
+    card.dataset.logId = log.id || "";
+    card.dataset.logIndex = String(index);
     card.setAttribute("aria-label", log.caption ? `기록: ${log.caption}` : "기록 사진");
     if (log.photo) {
       const photo = document.createElement("img");
@@ -2165,6 +2177,17 @@ function makePolaroid({ index, add = false, log = null }) {
   time.textContent = "";
 
   card.append(image, caption, time);
+  if (!add && log) {
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "polaroid-delete-button";
+    deleteButton.dataset.action = "request-delete-log";
+    deleteButton.dataset.logId = log.id || "";
+    deleteButton.dataset.logIndex = String(index);
+    deleteButton.setAttribute("aria-label", "이 기록 삭제");
+    deleteButton.textContent = "삭제";
+    card.append(deleteButton);
+  }
   return card;
 }
 
@@ -2177,6 +2200,123 @@ function bringPolaroidToFront(card) {
     item.classList.toggle("is-front", isFront);
     item.style.zIndex = String(isFront ? cards.length + 1 : index + 1);
   });
+}
+
+function showDeleteLogModal(message, { confirmable = false } = {}) {
+  if (!deleteLogModal || !deleteLogMessage || !deleteLogConfirm) return;
+  deleteLogMessage.textContent = message;
+  deleteLogConfirm.hidden = !confirmable;
+  deleteLogModal.hidden = false;
+  const focusTarget = confirmable
+    ? deleteLogConfirm
+    : deleteLogModal.querySelector(".delete-log-close");
+  requestAnimationFrame(() => focusTarget?.focus());
+}
+
+function closeDeleteLogModal() {
+  if (!deleteLogModal) return;
+  deleteLogModal.hidden = true;
+  pendingDeleteLog = null;
+}
+
+async function playlistUsesLog(log) {
+  if (!sb || !log?.logDate) return false;
+  const userId = await currentUserId();
+  if (!userId) throw new Error("로그인 정보를 확인할 수 없습니다.");
+  const { data: playlist, error: playlistError } = await sb
+    .from("playlists")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("playlist_date", log.logDate)
+    .limit(1)
+    .maybeSingle();
+  if (playlistError) throw playlistError;
+  if (!playlist?.id || !log.id) return false;
+
+  // 플레이리스트가 같은 날짜에 있더라도, 이 로그의 추천 트랙이 생성되지 않았다면
+  // 플레이리스트 만들기에 사용된 로그가 아니다.
+  const { data: track, error: trackError } = await sb
+    .from("tracks")
+    .select("id")
+    .eq("log_id", log.id)
+    .limit(1)
+    .maybeSingle();
+  if (trackError) throw trackError;
+  return Boolean(track?.id);
+}
+
+async function requestLogDeletion(logId, logIndex) {
+  const index = Number(logIndex);
+  const log = logs.find((item) => item.id && item.id === logId)
+    || (Number.isInteger(index) ? logs[index] : null);
+  if (!log) {
+    showDeleteLogModal("삭제할 기록을 찾지 못했습니다.");
+    return;
+  }
+
+  try {
+    if (await playlistUsesLog(log)) {
+      showDeleteLogModal("이미 플레이리스트에 사용된 기록은 삭제할 수 없습니다.");
+      return;
+    }
+  } catch (error) {
+    console.error("로그 삭제 가능 여부 확인 실패:", error.message);
+    showDeleteLogModal("삭제 가능 여부를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    return;
+  }
+
+  pendingDeleteLog = log;
+  showDeleteLogModal("기록을 삭제하시겠습니까?", { confirmable: true });
+}
+
+async function confirmPendingLogDeletion() {
+  const log = pendingDeleteLog;
+  if (!log) {
+    closeDeleteLogModal();
+    return;
+  }
+
+  if (!sb || !log.id) {
+    const localIndex = logs.indexOf(log);
+    if (localIndex >= 0) logs.splice(localIndex, 1);
+    closeDeleteLogModal();
+    await renderPolaroids();
+    return;
+  }
+
+  try {
+    // 확인 모달이 열린 뒤 플레이리스트가 만들어졌을 가능성까지 다시 검사한다.
+    if (await playlistUsesLog(log)) {
+      pendingDeleteLog = null;
+      showDeleteLogModal("이미 플레이리스트에 사용된 기록은 삭제할 수 없습니다.");
+      return;
+    }
+
+    const userId = await currentUserId();
+    if (!userId) throw new Error("로그인 정보를 확인할 수 없습니다.");
+    const { error: deleteError } = await sb
+      .from("daily_logs")
+      .delete()
+      .eq("id", log.id)
+      .eq("user_id", userId);
+    if (deleteError) throw deleteError;
+
+    const storagePaths = [log.photoPath, log.stickerPath].filter(Boolean);
+    if (storagePaths.length) {
+      const { error: storageError } = await sb.storage
+        .from("playmymood")
+        .remove(storagePaths);
+      if (storageError) {
+        console.warn("삭제된 기록의 Storage 파일 정리 실패:", storageError.message);
+      }
+    }
+
+    closeDeleteLogModal();
+    await renderPolaroids();
+  } catch (error) {
+    console.error("기록 삭제 실패:", error.message);
+    showDeleteLogModal("기록을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
 }
 
 async function finalizeTodayPlaylist() {
@@ -2216,7 +2356,7 @@ async function loadTodayLogsIntoLocalCache() {
   const date = todayKstDate();
   const { data, error } = await sb
     .from("daily_logs")
-    .select("caption, photo_path, logged_at")
+    .select("id, caption, photo_path, sticker_path, logged_at, log_date")
     .eq("user_id", userId)
     .eq("log_date", date)
     .order("logged_at");
@@ -2227,8 +2367,12 @@ async function loadTodayLogsIntoLocalCache() {
   logs.length = 0;
   for (const row of data || []) {
     logs.push({
+      id: row.id,
       caption: row.caption,
       photo: await signedUrl(row.photo_path),
+      photoPath: row.photo_path,
+      stickerPath: row.sticker_path,
+      logDate: row.log_date || date,
       date: formatDisplayDate(date),
       time: formatDisplayTime(row.logged_at),
     });
@@ -2351,6 +2495,12 @@ archiveMonthScreen?.addEventListener("touchcancel", () => {
 
 document.addEventListener("keydown", (event) => {
   if (event.target.closest?.("button")) return;
+  const polaroid = event.target.closest?.(".log-polaroid[data-action='select-log-polaroid']");
+  if (polaroid && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    bringPolaroidToFront(polaroid);
+    return;
+  }
   const row = event.target.closest?.(".archive-detail-track[data-action], .player-track[data-action]");
   if (!row || (event.key !== "Enter" && event.key !== " ")) return;
   event.preventDefault();
@@ -2387,6 +2537,21 @@ document.addEventListener("click", (event) => {
 
   if (target.classList.contains("archive-detail-cover-card")) {
     centerArchiveDetailCard(Number(target.dataset.archiveIndex || 0), "smooth");
+    return;
+  }
+
+  if (action === "request-delete-log") {
+    requestLogDeletion(target.dataset.logId || "", target.dataset.logIndex);
+    return;
+  }
+
+  if (action === "close-delete-log") {
+    closeDeleteLogModal();
+    return;
+  }
+
+  if (action === "confirm-delete-log") {
+    confirmPendingLogDeletion();
     return;
   }
 
