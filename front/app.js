@@ -5,6 +5,9 @@ const DESIGN_HEIGHT = 874;
 let baseViewportWidth = window.innerWidth || DESIGN_WIDTH;
 let baseViewportHeight = window.innerHeight || DESIGN_HEIGHT;
 
+// 현재 화면 id. record-home만 cover(꽉 채움), 나머지는 contain(안 잘림)으로 스케일한다.
+let currentScreenId = "login-screen";
+
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
   let viewportHeight = window.innerHeight || DESIGN_HEIGHT;
@@ -21,11 +24,20 @@ function updateAppScale() {
   }
 
   const fit = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
-  // 모바일: 비율 유지하며 화면을 꽉 채움(cover) — 오브젝트도 같이 커져 빈 공간 없음.
-  //         폰 비율이 402x874와 거의 같아 가장자리 잘림은 미미. (상태바 겹침은 viewport-fit 제거로 해결됨)
-  // 데스크탑: 1을 넘기지 않고 맞춤(회색 배경 위 폰 프레임).
   const cover = Math.max(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
-  const scale = viewportWidth <= 600 ? cover : Math.min(fit, 1);
+  const isMobile = viewportWidth <= 600;
+  const isRecordHome = currentScreenId === "record-home-screen";
+  // 모바일 & 메인(record-home)만 cover(꽉 채움, 책상이 화면을 덮음).
+  // 그 외 모든 화면은 contain(fit) — 헤더/버튼 등이 절대 안 잘리게.
+  // 데스크탑은 1을 넘기지 않고 맞춤(회색 배경 위 폰 프레임).
+  let scale;
+  if (!isMobile) {
+    scale = Math.min(fit, 1);
+  } else if (isRecordHome) {
+    scale = cover;
+  } else {
+    scale = fit;
+  }
   root.setProperty("--app-scale-x", String(scale));
   root.setProperty("--app-scale-y", String(scale));
 
@@ -1988,6 +2000,9 @@ function showScreen(index) {
   }
 
   const currentScreen = screens[currentIndex];
+  // 화면별 스케일(record-home만 cover, 나머지 contain)을 위해 현재 화면을 기록하고 다시 계산.
+  currentScreenId = currentScreen;
+  updateAppScale();
   document.querySelector(".app-shell")?.classList.toggle(
     "record-home-background",
     currentScreen === "record-home-screen",
@@ -2793,9 +2808,9 @@ document.addEventListener("click", (event) => {
     if (playerEntryMode === "home") {
       showScreen(screens.indexOf("record-home-screen"));
     } else {
-      // 플레이어는 앨범 상세(archive-playlist-detail)를 위로 스와이프해 펼친 상태이므로,
-      // 뒤로가기는 상세를 건너뛰고 "상세의 뒤로가기 목적지"(상세 바로 이전 화면)로 바로 간다.
-      showScreen(screens.indexOf("archive-playlist-detail-screen") - 1);
+      // 앨범 상태(archive-playlist-detail)와 플레이어는 같은 화면(스와이프로 펼친 것)이므로,
+      // 뒤로가기는 둘 다 책장(archive-screen)으로 바로 간다.
+      showScreen(screens.indexOf("archive-screen"));
     }
     return;
   }
@@ -2809,6 +2824,11 @@ document.addEventListener("click", (event) => {
     }
     if (currentScreen === "record-page-screen") {
       showScreen(screens.indexOf("record-home-screen"));
+      return;
+    }
+    // 앨범 상세(플레이어와 같은 화면)에서 뒤로가기는 책장(archive-screen)으로.
+    if (currentScreen === "archive-playlist-detail-screen") {
+      showScreen(screens.indexOf("archive-screen"));
       return;
     }
     showScreen(currentIndex - 1);
