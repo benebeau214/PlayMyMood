@@ -7,9 +7,9 @@ function updateAppScale() {
   const root = document.documentElement.style;
 
   if (viewportWidth <= 600) {
-    // 모바일: 비율 유지하며 화면을 꽉 채운다(cover). 한 축은 정확히 맞고
-    // 넘치는 축의 가장자리만 살짝 잘린다 → 왜곡(찌부) 없음.
-    const scale = Math.max(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
+    // 모바일: 비율 유지하며 화면에 "맞춤"(contain). 전체 디자인이 다 보이고
+    // 아무것도 안 잘린다. 화면 비율과 다른 만큼 가장자리에 배경색 여백이 생김.
+    const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
     root.setProperty("--app-scale-x", String(scale));
     root.setProperty("--app-scale-y", String(scale));
   } else {
