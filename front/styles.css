@@ -1375,7 +1375,9 @@ h1 {
   transform: translateX(-50%);
   width: 142px;
   height: 142px;
-  background: #d76568;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)),
+    url("./assets/playlist-record.png") center / 93.33% no-repeat;
   box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18);
 }
 
@@ -2178,7 +2180,7 @@ h1 {
   z-index: 2;
   width: 165px;
   height: 165px;
-  background: #d76468;
+  background: rgba(255, 255, 255, 0.34);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.22);
 }
 
@@ -2342,16 +2344,16 @@ h1 {
 
 /* Use record image asset for playlist cover preview */
 .playlist-cover-preview {
-  width: 304px;
+  width: 245px;
 }
 
 .playlist-cover-preview .cover-square {
-  left: 43px;
+  left: 0;
 }
 
 .playlist-cover-preview .cover-disc {
-  right: 8px;
-  top: 11px;
+  right: 0;
+  top: 5px;
   width: 154px;
   height: 154px;
   border-radius: 50%;
@@ -2654,7 +2656,7 @@ h1 {
 .archive-album-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
 .archive-album-date { position: absolute; left: 0; right: 0; top: 0; color: #666; font-size: 1rem; text-align: center; }
 .archive-album-card:not([aria-current="true"]) .archive-album-date { opacity: 0; }
-.archive-album-cover { position: absolute; left: 0; top: 55px; width: 197px; height: 197px; background: #ff6b00; }
+.archive-album-cover { position: absolute; left: 0; top: 55px; width: 197px; height: 197px; background: linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)), url("./assets/playlist-record.png") center / 93.33% no-repeat; box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18); }
 .archive-empty-message { flex: 0 0 100%; margin: 95px 0 0; color: #777; text-align: center; font-size: 1rem; }
 .archive-month-copy { position: absolute; left: 26px; right: 26px; top: 565px; text-align: center; }
 .archive-month-copy h1,
@@ -2667,7 +2669,7 @@ h1 {
 .archive-detail-date { position: absolute; left: 0; right: 0; top: 0; margin: 0; color: #666; text-align: center; font-size: 1rem; transition: opacity 180ms ease; }
 .archive-detail-cover-card:not([aria-current="true"]) .archive-detail-date { opacity: 0; }
 .archive-detail-cover { position: absolute; left: 0; top: 35px; width: 245px; height: 166px; border: 0; background: transparent; }
-.archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: #ff6b00; }
+.archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: rgba(255, 255, 255, 0.34); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.22); }
 /* 원판은 기본적으로 사각형 뒤에 완전히 숨어있다(LP 커버 상태). */
 .archive-detail-record { position: absolute; right: 0; top: 5px; z-index: 1; width: 154px; height: 154px; object-fit: contain; transform: translateX(-82px); transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1); }
 /* 가운데(활성) 카드에서만 원판이 옆으로 슬라이드되어 나온다. */
@@ -4114,4 +4116,3 @@ h1 {
 #welcome-screen h1 strong {
   font-weight: 600;
 }
-
