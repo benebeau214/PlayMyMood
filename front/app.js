@@ -24,17 +24,12 @@ function updateAppScale() {
   }
 
   const fit = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
-  const cover = Math.max(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
   const isMobile = viewportWidth <= 600;
-  const isRecordHome = currentScreenId === "record-home-screen";
-  // 모바일 & 메인(record-home)만 cover(꽉 채움, 책상이 화면을 덮음).
-  // 그 외 모든 화면은 contain(fit) — 헤더/버튼 등이 절대 안 잘리게.
-  // 데스크탑은 1을 넘기지 않고 맞춤(회색 배경 위 폰 프레임).
+  // 모든 화면은 화면을 잘라내지 않는 contain(fit) 방식으로 맞춘다.
+  // 화면이 딱 맞지 않을 때는 옆 여백이 배경색으로 채워지도록 한다.
   let scale;
   if (!isMobile) {
     scale = Math.min(fit, 1);
-  } else if (isRecordHome) {
-    scale = cover;
   } else {
     scale = fit;
   }
