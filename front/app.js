@@ -6,21 +6,21 @@ function updateAppScale() {
   const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
   const root = document.documentElement.style;
 
-  if (viewportWidth <= 600) {
-    // 모바일: 비율 유지하며 화면에 "맞춤"(contain). 전체 디자인이 다 보이고
-    // 아무것도 안 잘린다. 화면 비율과 다른 만큼 가장자리에 배경색 여백이 생김.
-    const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
-    root.setProperty("--app-scale-x", String(scale));
-    root.setProperty("--app-scale-y", String(scale));
-  } else {
-    // 데스크탑: 비율 유지하며 축소(회색 배경 위 폰 프레임). 1을 넘기지 않음.
-    const scale = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT, 1);
-    root.setProperty("--app-scale-x", String(scale));
-    root.setProperty("--app-scale-y", String(scale));
-  }
+  // 비율 유지하며 화면에 "맞춤"(contain) — 전체 디자인이 다 보이고 안 잘림.
+  const fit = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
+  // 데스크탑은 1을 넘기지 않음(회색 배경 위 폰 프레임). 모바일은 화면에 맞춤.
+  const scale = viewportWidth <= 600 ? fit : Math.min(fit, 1);
+  root.setProperty("--app-scale-x", String(scale));
+  root.setProperty("--app-scale-y", String(scale));
 
   root.setProperty("--app-width", `${DESIGN_WIDTH}px`);
   root.setProperty("--app-height", `${DESIGN_HEIGHT}px`);
+
+  // record-home 데스크를 여백까지 이어지게 하기 위한 "벽/책상 경계선"의 화면상 y좌표.
+  // (프레임은 화면 중앙에 scale로 축소돼 있고, 그 안 벽 높이는 163px)
+  const WALL_HEIGHT = 163;
+  const frameTop = (viewportHeight - DESIGN_HEIGHT * scale) / 2;
+  root.setProperty("--desk-split", `${Math.round(frameTop + WALL_HEIGHT * scale)}px`);
 }
 
 updateAppScale();
@@ -1976,6 +1976,8 @@ function showScreen(index) {
     "record-home-background",
     currentScreen === "record-home-screen",
   );
+  // record-home일 때 프레임 밖 여백도 책상(위=크림 벽, 아래=브라운 책상)으로 채운다.
+  document.body.classList.toggle("record-home-bleed", currentScreen === "record-home-screen");
   if (currentScreen === "capture-screen") {
     startCamera();
   } else {

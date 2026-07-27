@@ -725,6 +725,16 @@ h1 {
     overscroll-behavior: none;
   }
 
+  /* record-home: 프레임 밖 여백도 데스크로 이어지게 (위=크림 벽, 아래=브라운 책상).
+     --desk-split = 프레임 안 벽/책상 경계선의 화면상 y좌표(JS가 계산). */
+  body.record-home-bleed {
+    background: linear-gradient(
+      to bottom,
+      var(--app-bg) 0 var(--desk-split, 163px),
+      #deb38a var(--desk-split, 163px) 100%
+    );
+  }
+
   .app-shell.record-home-background {
     background: linear-gradient(
       to bottom,
@@ -1432,8 +1442,19 @@ h1 {
   top: 0;
   left: 0;
   right: 0;
-  height: 130px; /* 크림 벽면을 줄여 테이블(브라운)을 더 길게 */
+  height: 163px;
   background: var(--app-bg);
+}
+
+/* 책상 상판. 벽/책상 경계(163px)부터 아래 전체. 화분보다 위 레이어라
+   화분 아랫부분을 덮어 "책상 뒤 화분"처럼 보이게 한다. */
+.desk-table {
+  position: absolute;
+  top: 163px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #deb38a;
 }
 
 .scene-plant,
@@ -1485,9 +1506,9 @@ h1 {
 }
 
 .scene-camera {
-  left: -38px;
-  top: 200px;
-  width: 265px; /* 카메라를 더 크게(더 보이게) */
+  left: -43px;
+  top: 222px;
+  width: 230px;
 }
 
 .scene-photo-back {
@@ -1505,9 +1526,9 @@ h1 {
 }
 
 .scene-player {
-  left: 60px;
-  top: 545px;
-  width: 405px; /* LP플레이어를 더 크게(더 보이게) */
+  left: 74px;
+  top: 537px;
+  width: 361px;
 }
 
 /* Figma Group 21: x54 y427 157x36 */
