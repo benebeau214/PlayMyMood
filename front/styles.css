@@ -3228,6 +3228,32 @@ h1 {
   animation: player-refresh-spin 700ms linear infinite;
 }
 
+.player-status {
+  position: absolute;
+  left: 31px;
+  right: 31px;
+  bottom: 112px;
+  z-index: 32;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(40, 40, 40, 0.9);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+.player-status[hidden] {
+  display: none;
+}
+
+.player-status[data-type="error"] {
+  background: rgba(167, 47, 31, 0.94);
+}
+
 @keyframes player-refresh-spin {
   to { transform: rotate(360deg); }
 }

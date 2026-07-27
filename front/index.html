@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Play My Mood" />
     <link rel="apple-touch-icon" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260727-mobile-caption-keyboard" />
+    <link rel="stylesheet" href="./styles.css?v=20260727-mobile-spotify-status" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
@@ -209,6 +209,7 @@
         <button class="player-nav-button player-back-button" type="button" data-action="player-nav" aria-label="뒤로">←</button>
         <p class="player-date" id="player-date">2026.06.11</p>
         <button class="player-refresh-button" type="button" data-action="refresh-player" aria-label="플레이리스트 새로고침">↻</button>
+        <p class="player-status" id="player-status" role="status" aria-live="polite" hidden></p>
         <div class="player-hero" aria-label="플레이리스트 커버">
           <div class="player-record-board" aria-hidden="true">
             <span class="player-board-base"></span>
@@ -397,7 +398,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260727-mobile-caption-keyboard"></script>
+    <script src="./app.js?v=20260727-mobile-spotify-status"></script>
   </body>
 </html>
 
