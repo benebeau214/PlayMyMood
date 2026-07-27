@@ -149,6 +149,7 @@ const flashButton = document.querySelector(".flash-button");
 const emotionPhotoPreview = document.querySelector(".emotion-photo-preview");
 const emotionCaptionPreview = document.querySelector(".emotion-caption-preview");
 const emotionStaff = document.querySelector(".emotion-staff");
+const emotionDoneButton = document.querySelector(".emotion-done-button");
 const playlistTitleInput = document.getElementById("playlist-title");
 const playlistIntroInput = document.querySelector(".playlist-intro-input");
 const archiveMonthTitle = document.getElementById("archive-month-title");
@@ -686,16 +687,9 @@ function renderPlayerMoodNotes(dayLogs = []) {
 }
 
 function readSelectedEmotions() {
-  const emotions = selectedMoodEmotions
+  return selectedMoodEmotions
     .filter((emotion) => EMOTION_VALUES.includes(emotion))
     .slice(0, MAX_EMOTION_SELECTIONS);
-  if (emotions.length === 0) {
-    // 감정 버튼이 아직 플레이스홀더("기쁨" 등)라 유효한 라벨이 없으면 테스트용 기본값으로 저장.
-    // 화면용 명사 라벨과 DB enum 값이 다르므로 data-emotion 값을 우선 저장한다.
-    console.warn("유효한 감정 라벨 없음 → 기본값 ['기쁜']으로 저장 (감정 버튼 라벨을 실제 값으로 채워야 함)");
-    return ["기쁜"];
-  }
-  return emotions;
 }
 
 function dataUrlToBlob(dataUrl) {
@@ -2110,6 +2104,7 @@ function renderEmotionStaff(noteSources = selectedMoodNotes) {
 function resetEmotionStaff() {
   selectedMoodNotes = [];
   selectedMoodEmotions = [];
+  if (emotionDoneButton) emotionDoneButton.disabled = true;
   emotionStaff?.querySelectorAll(".staff-note").forEach((note) => note.remove());
   for (const item of document.querySelectorAll(".emotion-choice")) {
     item.classList.remove("selected");
@@ -2126,6 +2121,7 @@ function updateEmotionChoiceStates() {
     if (count > 0) button.dataset.selectionCount = String(count);
     else delete button.dataset.selectionCount;
   }
+  if (emotionDoneButton) emotionDoneButton.disabled = readSelectedEmotions().length === 0;
 }
 
 function selectEmotion(button) {
@@ -2471,6 +2467,7 @@ window.visualViewport?.addEventListener("resize", syncCaptionKeyboardLayout);
 window.visualViewport?.addEventListener("scroll", syncCaptionKeyboardLayout);
 
 archiveMonthCarousel?.addEventListener("scroll", () => {
+  if (archiveMonthCarousel.scrollTop !== 0) archiveMonthCarousel.scrollTop = 0;
   if (archiveCarouselFrame !== null) cancelAnimationFrame(archiveCarouselFrame);
   archiveCarouselFrame = requestAnimationFrame(() => {
     archiveCarouselFrame = null;
@@ -2479,6 +2476,7 @@ archiveMonthCarousel?.addEventListener("scroll", () => {
 });
 
 archiveDetailCarousel?.addEventListener("scroll", () => {
+  if (archiveDetailCarousel.scrollTop !== 0) archiveDetailCarousel.scrollTop = 0;
   if (archiveDetailCarouselFrame !== null) cancelAnimationFrame(archiveDetailCarouselFrame);
   archiveDetailCarouselFrame = requestAnimationFrame(() => {
     archiveDetailCarouselFrame = null;
@@ -2714,12 +2712,17 @@ document.addEventListener("click", (event) => {
     return;
   }
   if (action === "save-log") {
+    const emotions = readSelectedEmotions();
+    if (emotions.length === 0) {
+      alert("감정 이모지를 1개 이상 선택해 주세요.");
+      return;
+    }
     // Supabase 저장 (사진 업로드 + daily_logs insert). 값이 아래에서 초기화되기 전에 넘긴다.
     trackLogProcessing(
       saveLog({
         photo: capturedPhotoDataUrl,
         caption: pendingNote,
-        emotions: readSelectedEmotions(),
+        emotions,
       }),
     );
     logs.push({

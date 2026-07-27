@@ -1621,6 +1621,11 @@ h1 {
   cursor: pointer;
 }
 
+.emotion-done-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .emotion-polaroid {
   position: absolute;
   left: 93px;
@@ -2650,7 +2655,27 @@ h1 {
 .archive-playlist-detail-screen.active { display: block; }
 .archive-month-header { position: absolute; left: 0; right: 0; top: 73px; display: flex; justify-content: center; align-items: center; gap: 24px; color: #111; font-size: 1.5rem; font-weight: 500; }
 .archive-month-nav { width: 24px; height: 28px; border: 0; background: transparent; color: #111; font: inherit; cursor: pointer; }
-.archive-month-carousel { position: absolute; left: 0; right: 0; top: 280px; height: 250px; display: flex; gap: 34px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 0 102px; scrollbar-width: none; }
+.archive-month-carousel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 280px;
+  height: 252px;
+  display: flex;
+  gap: 34px;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 102px;
+  scroll-behavior: smooth;
+  padding: 0 102px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
 .archive-month-carousel::-webkit-scrollbar { display: none; }
 .archive-album-card { position: relative; flex: 0 0 197px; height: 252px; z-index: 1; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; opacity: 0.46; filter: blur(1.2px); transform: scale(0.72); transform-origin: center; transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease; }
 .archive-album-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
@@ -2662,9 +2687,29 @@ h1 {
 .archive-month-copy h1,
 .archive-detail-name { margin: 0; color: #111; font-size: 1.18rem; font-weight: 700; }
 .archive-month-copy p { margin: 17px 0 0; color: #444; font-size: 0.95rem; line-height: 1.35; }
-.archive-detail-carousel { position: absolute; left: 0; right: 0; top: 180px; height: 201px; display: flex; gap: 24px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 79px; scrollbar-width: none; }
+.archive-detail-carousel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 180px;
+  height: 201px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: none;
+  touch-action: pan-x;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 79px;
+  padding: 0 79px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
 .archive-detail-carousel::-webkit-scrollbar { display: none; }
 .archive-detail-cover-card { position: relative; flex: 0 0 245px; height: 201px; z-index: 1; padding: 0; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; opacity: 0.46; filter: blur(1.2px); transform: scale(0.72); transform-origin: center; transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease; }
+.archive-detail-cover-card:not(:last-child) { margin-right: -58px; }
 .archive-detail-cover-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
 .archive-detail-date { position: absolute; left: 0; right: 0; top: 0; margin: 0; color: #666; text-align: center; font-size: 1rem; transition: opacity 180ms ease; }
 .archive-detail-cover-card:not([aria-current="true"]) .archive-detail-date { opacity: 0; }
