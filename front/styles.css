@@ -2374,6 +2374,20 @@ h1 {
   display: block;
 }
 
+/* 상단 그라데이션(Figma node 82:499): 위는 크림색으로 꽉 차고 아래로 투명해져
+   스크롤되는 책장이 상단에서 자연스럽게 사라진다. */
+.archive-screen::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 188px;
+  z-index: 3;
+  background: linear-gradient(to top, rgba(251, 246, 234, 0) 0%, #fbf6ea 40.548%);
+  pointer-events: none;
+}
+
 .archive-header {
   position: relative;
   height: 134px;
@@ -2382,6 +2396,7 @@ h1 {
 .archive-home-button {
   left: 31px;
   top: 54px;
+  z-index: 4; /* 상단 그라데이션 위에 */
 }
 
 .archive-year-control {
@@ -2394,6 +2409,7 @@ h1 {
   justify-content: center;
   gap: 22px;
   color: #111;
+  z-index: 4; /* 상단 그라데이션 위에 */
 }
 
 .archive-year-control span {
@@ -2569,10 +2585,10 @@ h1 {
   --lp-color: #F44D07;
   --lp-side-color: #E17A4F;
   position: absolute;
-  bottom: 16px;
+  bottom: 14px;
   left: 0;
   width: 7px;
-  height: 120px;
+  height: 160px; /* 시안처럼 선반 높이를 거의 꽉 채우게 */
   transform-origin: bottom left;
   background: var(--lp-color);
 }
@@ -2652,7 +2668,10 @@ h1 {
 .archive-detail-cover-card:not([aria-current="true"]) .archive-detail-date { opacity: 0; }
 .archive-detail-cover { position: absolute; left: 0; top: 35px; width: 245px; height: 166px; border: 0; background: transparent; }
 .archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: #ff6b00; }
-.archive-detail-record { position: absolute; right: 0; top: 5px; z-index: 1; width: 154px; height: 154px; object-fit: contain; }
+/* 원판은 기본적으로 사각형 뒤에 완전히 숨어있다(LP 커버 상태). */
+.archive-detail-record { position: absolute; right: 0; top: 5px; z-index: 1; width: 154px; height: 154px; object-fit: contain; transform: translateX(-82px); transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* 가운데(활성) 카드에서만 원판이 옆으로 슬라이드되어 나온다. */
+.archive-detail-cover-card[aria-current="true"] .archive-detail-record { transform: translateX(0); }
 .archive-detail-name { position: absolute; left: 0; right: 0; top: 421px; text-align: center; }
 .archive-detail-tracks { position: absolute; left: 17px; right: 17px; top: 456px; border-top: 1px solid #d6d0c5; }
 .archive-detail-track { display: grid; grid-template-columns: 52px 1fr; gap: 18px; align-items: center; min-height: 76px; border-bottom: 1px solid #d6d0c5; }
@@ -3971,6 +3990,37 @@ h1 {
 .archive-detail-tracks::-webkit-scrollbar,
 .playlist-player-screen .player-track-list::-webkit-scrollbar {
   display: none;
+}
+
+/* 플레이어 진입 모션: LP가 커버 뒤에서 나오고, 트랙 리스트/컨트롤이 아래에서 올라온다.
+   화면이 .active 될 때(스와이프 업 or 버튼) 한 번 재생된다. */
+@keyframes pl-disc-emerge {
+  from { opacity: 0; transform: translateX(-34px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pl-rise {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.playlist-player-screen.active .player-record-board {
+  animation: pl-disc-emerge 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.playlist-player-screen.active .player-title {
+  animation: pl-rise 0.45s ease-out 0.1s both;
+}
+.playlist-player-screen.active .player-track-list {
+  animation: pl-rise 0.5s ease-out 0.18s both;
+}
+.playlist-player-screen.active .player-controls {
+  animation: pl-rise 0.5s ease-out 0.26s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .playlist-player-screen.active .player-record-board,
+  .playlist-player-screen.active .player-title,
+  .playlist-player-screen.active .player-track-list,
+  .playlist-player-screen.active .player-controls {
+    animation: none;
+  }
 }
 
 /* Archive/player track actions: row plays the song, ellipsis opens its log. */
