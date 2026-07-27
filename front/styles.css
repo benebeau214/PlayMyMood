@@ -35,10 +35,10 @@
   --design-width: 402;
   --design-height: 874;
   --app-scale: 1;
+  --app-scale-x: 1;
+  --app-scale-y: 1;
   --app-width: 402px;
   --app-height: 874px;
-  --app-side-space: 0px;
-  --app-render-height: 874px;
   color: #0b0b0b;
   background: #9a9a9a;
   font-family: "Gmarket Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Arial, sans-serif;
@@ -71,7 +71,7 @@ button, input { font: inherit; }
   min-height: 0;
   background: var(--app-bg);
   overflow: hidden;
-  transform: translate(-50%, -50%) scale(var(--app-scale));
+  transform: translate(-50%, -50%) scale(var(--app-scale-x), var(--app-scale-y));
   transform-origin: center center;
 }
 
@@ -710,64 +710,34 @@ h1 {
 .playlist-button { display: none; }
 .playlist-button.visible { display: block; }
 
-@media (min-width: 601px) and (max-height: 780px) {
-  .app-shell { min-height: 100vh; }
-  .top-area { padding-top: 32px; }
-  .content, .cover-content { padding-top: 52px; }
-  .hit-content { padding: 64px 21px 0; }
-  .hit-slider-wrap { margin-top: 128px; }
-  .genre-content { padding: 62px 16px 0; }
-  .era-content { padding: 64px 17px 0; }
-  .name-content { padding-top: 72px; }
-  .intro-notes { margin-top: 88px; }
-  .next-button { bottom: 28px; }
-  .playlist-button { bottom: 28px; }
-}
-
+/* 좁은 화면에서도 프레임은 402x874 그대로, --app-scale 로만 축소된다. */
 @media (max-width: 600px) {
   html {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     background: var(--app-bg);
   }
 
   body {
     width: 100%;
-    min-height: var(--app-render-height);
+    min-height: 100dvh;
     background: var(--app-bg);
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-x: none;
-  }
-
-  .app-shell {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%) scale(var(--app-scale));
-    transform-origin: top center;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   .app-shell.record-home-background {
     background: linear-gradient(
       to bottom,
-      var(--app-bg) 0 159px,
-      #deb38a 159px 100%
+      var(--app-bg) 0 163px,
+      #deb38a 163px 100%
     );
   }
 
-  .screen {
+  /* 키보드가 열린 캡션 화면은 축소된 visual viewport의 중앙이 아니라 상단에 고정한다. */
+  .app-shell.caption-keyboard-open {
     top: 0;
-    bottom: 0;
-    left: 50%;
-    right: auto;
-    width: 402px;
-    transform: translateX(-50%);
-  }
-
-  .capture-screen .camera-preview {
-    left: calc(-1 * var(--app-side-space));
-    right: calc(-1 * var(--app-side-space));
+    transform: translateX(-50%) scale(var(--app-scale-x), var(--app-scale-y));
+    transform-origin: top center;
   }
 }
 
@@ -834,6 +804,12 @@ h1 {
   height: 100%;
   object-fit: cover;
   transform-origin: center;
+}
+
+/* 모바일 브라우저의 기본 video 스타일보다 우선해 전면 미리보기와 줌을 함께 적용한다. */
+.camera-preview video {
+  transform: scaleX(var(--camera-mirror-x, 1)) scale(var(--camera-zoom, 1)) !important;
+  -webkit-transform: scaleX(var(--camera-mirror-x, 1)) scale(var(--camera-zoom, 1)) !important;
 }
 
 .camera-placeholder {
@@ -1456,7 +1432,7 @@ h1 {
   top: 0;
   left: 0;
   right: 0;
-  height: 159px;
+  height: 163px;
   background: var(--app-bg);
 }
 
@@ -1470,18 +1446,20 @@ h1 {
   pointer-events: none;
 }
 
+/* Figma Group 110: x16 y20 145x162 */
 .scene-plant {
-  left: -4px;
-  top: 29px;
-  width: 134px;
+  left: 16px;
+  top: 20px;
+  width: 145px;
 }
 
+/* Figma Ellipse 39: x290 y31 72x72 */
 .scene-clock {
   position: absolute;
-  right: 39px;
-  top: 47px;
-  width: 73px;
-  height: 73px;
+  left: 290px;
+  top: 31px;
+  width: 72px;
+  height: 72px;
 }
 
 .clock-face,
@@ -1494,15 +1472,16 @@ h1 {
 
 .clock-face {
   inset: 0;
-  width: 73px;
-  height: 73px;
+  width: 72px;
+  height: 72px;
 }
 
+/* Figma Line 13: x324 y44, 25 tall */
 .clock-hand-long {
-  left: 35px;
-  top: 14px;
+  left: 34px;
+  top: 13px;
   width: 2px;
-  height: 28px;
+  height: 25px;
 }
 
 .scene-camera {
@@ -1531,12 +1510,13 @@ h1 {
   width: 361px;
 }
 
+/* Figma Group 21: x54 y427 157x36 */
 .record-button {
   position: absolute;
-  left: 68px;
-  top: 443px;
+  left: 54px;
+  top: 427px;
   width: 157px;
-  height: 37px;
+  height: 36px;
   border: 0;
   border-radius: 5px;
   background: #fff;
@@ -1547,10 +1527,12 @@ h1 {
   cursor: pointer;
 }
 
+/* Figma Group 22: x24 y763 157x36 */
 .archive-pill {
   position: absolute;
-  left: 57px;
-  bottom: 35px;
+  left: 24px;
+  top: 763px;
+  bottom: auto;
   width: 157px;
   height: 36px;
   display: grid;
@@ -2488,18 +2470,25 @@ h1 {
 .archive-playlist-detail-screen.active { display: block; }
 .archive-month-header { position: absolute; left: 0; right: 0; top: 73px; display: flex; justify-content: center; align-items: center; gap: 24px; color: #111; font-size: 1.5rem; font-weight: 500; }
 .archive-month-nav { width: 24px; height: 28px; border: 0; background: transparent; color: #111; font: inherit; cursor: pointer; }
-.archive-month-carousel { position: absolute; left: 0; right: 0; top: 280px; height: 250px; display: flex; gap: 40px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 102px; scrollbar-width: none; }
+.archive-month-carousel { position: absolute; left: 0; right: 0; top: 280px; height: 250px; display: flex; gap: 34px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 0 102px; scrollbar-width: none; }
 .archive-month-carousel::-webkit-scrollbar { display: none; }
-.archive-album-card { position: relative; flex: 0 0 197px; height: 252px; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; }
+.archive-album-card { position: relative; flex: 0 0 197px; height: 252px; z-index: 1; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; opacity: 0.46; filter: blur(1.2px); transform: scale(0.72); transform-origin: center; transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease; }
+.archive-album-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
 .archive-album-date { position: absolute; left: 0; right: 0; top: 0; color: #666; font-size: 1rem; text-align: center; }
+.archive-album-card:not([aria-current="true"]) .archive-album-date { opacity: 0; }
 .archive-album-cover { position: absolute; left: 0; top: 55px; width: 197px; height: 197px; background: #ff6b00; }
 .archive-empty-message { flex: 0 0 100%; margin: 95px 0 0; color: #777; text-align: center; font-size: 1rem; }
 .archive-month-copy { position: absolute; left: 26px; right: 26px; top: 565px; text-align: center; }
 .archive-month-copy h1,
 .archive-detail-name { margin: 0; color: #111; font-size: 1.18rem; font-weight: 700; }
 .archive-month-copy p { margin: 17px 0 0; color: #444; font-size: 0.95rem; line-height: 1.35; }
-.archive-detail-date { position: absolute; left: 0; right: 0; top: 180px; margin: 0; color: #666; text-align: center; font-size: 1rem; }
-.archive-detail-cover { position: absolute; left: 88px; top: 211px; width: 245px; height: 166px; border: 0; background: transparent; cursor: pointer; }
+.archive-detail-carousel { position: absolute; left: 0; right: 0; top: 180px; height: 201px; display: flex; gap: 24px; align-items: center; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 79px; scrollbar-width: none; }
+.archive-detail-carousel::-webkit-scrollbar { display: none; }
+.archive-detail-cover-card { position: relative; flex: 0 0 245px; height: 201px; z-index: 1; padding: 0; border: 0; background: transparent; scroll-snap-align: center; cursor: pointer; opacity: 0.46; filter: blur(1.2px); transform: scale(0.72); transform-origin: center; transition: transform 180ms ease, opacity 180ms ease, filter 180ms ease; }
+.archive-detail-cover-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
+.archive-detail-date { position: absolute; left: 0; right: 0; top: 0; margin: 0; color: #666; text-align: center; font-size: 1rem; transition: opacity 180ms ease; }
+.archive-detail-cover-card:not([aria-current="true"]) .archive-detail-date { opacity: 0; }
+.archive-detail-cover { position: absolute; left: 0; top: 35px; width: 245px; height: 166px; border: 0; background: transparent; }
 .archive-detail-square { position: absolute; left: 0; top: 0; z-index: 2; width: 165px; height: 165px; background: #ff6b00; }
 .archive-detail-record { position: absolute; right: 0; top: 5px; z-index: 1; width: 154px; height: 154px; object-fit: contain; }
 .archive-detail-name { position: absolute; left: 0; right: 0; top: 421px; text-align: center; }
@@ -3210,6 +3199,39 @@ h1 {
   left: 20px;
   top: 132px;
 }
+
+.player-refresh-button {
+  position: absolute;
+  right: 31px;
+  top: 55px;
+  z-index: 20;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.player-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.player-refresh-button.refreshing {
+  animation: player-refresh-spin 700ms linear infinite;
+}
+
+@keyframes player-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Unified top-left navigation button placement */
 .screen .back-button,
 .archive-inner-back,
