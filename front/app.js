@@ -1,15 +1,31 @@
 ﻿const DESIGN_WIDTH = 402;
 const DESIGN_HEIGHT = 874;
 
+// 키보드가 뜰 때 innerHeight가 줄어드는 것을 무시하기 위한 기준값(키보드 없을 때의 크기).
+let baseViewportWidth = window.innerWidth || DESIGN_WIDTH;
+let baseViewportHeight = window.innerHeight || DESIGN_HEIGHT;
+
 function updateAppScale() {
   const viewportWidth = window.innerWidth || DESIGN_WIDTH;
-  const viewportHeight = window.innerHeight || DESIGN_HEIGHT;
+  let viewportHeight = window.innerHeight || DESIGN_HEIGHT;
   const root = document.documentElement.style;
 
-  // 비율 유지하며 화면에 "맞춤"(contain) — 전체 디자인이 다 보이고 안 잘림.
+  // 너비는 그대로인데 높이만 줄었으면 = 키보드가 올라온 것.
+  // 이때 앱을 다시 축소하지 않도록 "키보드 없을 때 높이"를 그대로 사용한다.
+  // (그래야 폴라로이드/입력창이 안 흔들리고, 키보드는 앱 위에 겹쳐진다)
+  if (viewportWidth === baseViewportWidth && viewportHeight < baseViewportHeight) {
+    viewportHeight = baseViewportHeight;
+  } else {
+    baseViewportWidth = viewportWidth;
+    baseViewportHeight = viewportHeight;
+  }
+
   const fit = Math.min(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
-  // 데스크탑은 1을 넘기지 않음(회색 배경 위 폰 프레임). 모바일은 화면에 맞춤.
-  const scale = viewportWidth <= 600 ? fit : Math.min(fit, 1);
+  // 모바일: 비율 유지하며 화면을 꽉 채움(cover) — 오브젝트도 같이 커져 빈 공간 없음.
+  //         폰 비율이 402x874와 거의 같아 가장자리 잘림은 미미. (상태바 겹침은 viewport-fit 제거로 해결됨)
+  // 데스크탑: 1을 넘기지 않고 맞춤(회색 배경 위 폰 프레임).
+  const cover = Math.max(viewportWidth / DESIGN_WIDTH, viewportHeight / DESIGN_HEIGHT);
+  const scale = viewportWidth <= 600 ? cover : Math.min(fit, 1);
   root.setProperty("--app-scale-x", String(scale));
   root.setProperty("--app-scale-y", String(scale));
 
@@ -2774,7 +2790,13 @@ document.addEventListener("click", (event) => {
   if (action === "player-nav") {
     setPlayerPlaying(false);
     spotifyPlayer?.pause();
-    showScreen(screens.indexOf(playerEntryMode === "home" ? "record-home-screen" : "archive-playlist-detail-screen"));
+    if (playerEntryMode === "home") {
+      showScreen(screens.indexOf("record-home-screen"));
+    } else {
+      // 플레이어는 앨범 상세(archive-playlist-detail)를 위로 스와이프해 펼친 상태이므로,
+      // 뒤로가기는 상세를 건너뛰고 "상세의 뒤로가기 목적지"(상세 바로 이전 화면)로 바로 간다.
+      showScreen(screens.indexOf("archive-playlist-detail-screen") - 1);
+    }
     return;
   }
 
@@ -2807,3 +2829,34 @@ document.addEventListener("click", (event) => {
 
 renderPolaroids();
 initAuth();
+
+// 아카이브 상세에서 위로 스와이프 → 플레이어로 (LP가 커버 뒤에서 나오고 리스트가 올라오는 모션).
+(function setupArchiveSwipeUp() {
+  const detail = document.getElementById("archive-playlist-detail-screen");
+  if (!detail) return;
+  let startX = null;
+  let startY = null;
+  detail.addEventListener(
+    "touchstart",
+    (event) => {
+      startX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+    },
+    { passive: true },
+  );
+  detail.addEventListener(
+    "touchend",
+    (event) => {
+      if (startY === null) return;
+      const dy = startY - event.changedTouches[0].clientY; // 위로 스와이프하면 양수
+      const dx = Math.abs(startX - event.changedTouches[0].clientX);
+      if (dy > 60 && dy > dx) {
+        playerEntryMode = "archive";
+        showScreen(screens.indexOf("playlist-player-screen"));
+      }
+      startX = null;
+      startY = null;
+    },
+    { passive: true },
+  );
+})();
