@@ -937,26 +937,29 @@ async function renderPlaylistEdit(userId, date = todayKstDate()) {
     }
   }
 
-  // 커버(핑크 사각형)에 그날 스티커들 오버레이
+  // 케이스 위에 그날 스티커들 오버레이
   await renderStickerCover(document.querySelector("#playlist-edit-screen .cover-square"), dayLogs);
 }
 
-// 그날 로그들의 sticker_path를 정사각형 커버 위에 겹쳐 그린다.
-// (오늘 플리 편집 화면 / 아카이브 상세 화면에서 공용으로 사용)
+function createSeededRandom(seed) {
+  let state = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    state = (Math.imul(state, 31) + seed.charCodeAt(index)) | 0;
+  }
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) | 0;
+    return (state >>> 0) / 4294967296;
+  };
+}
+
+// 그날 로그들의 sticker_path를 케이스 위에 겹쳐 그린다.
+// (플리 편집·완료 화면과 아카이브 커버에서 공용으로 사용)
 async function renderStickerCover(coverEl, dayLogs) {
   if (!coverEl) return;
   coverEl.querySelectorAll(".cover-sticker").forEach((sticker) => sticker.remove());
-  // position은 건드리지 않는다 — 두 재사용처(.cover-square div, .archive-detail-square span)
-  // 모두 스타일시트에서 이미 position:absolute라 그 자체로 자식 절대배치 기준이 된다.
+  // 재사용처들은 스타일시트에서 이미 position:absolute라 자식 절대배치 기준이 된다.
   // 여기서 relative로 덮어쓰면 <span>(inline 기본값)의 width/height가 무시돼 찌그러짐.
   coverEl.style.overflow = "hidden";
-  const positions = [
-    { left: "6%", top: "8%" },
-    { left: "52%", top: "6%" },
-    { left: "12%", top: "48%" },
-    { left: "54%", top: "50%" },
-    { left: "32%", top: "28%" },
-  ];
   let placed = 0;
   for (const log of dayLogs) {
     if (!log.sticker_path) continue;
@@ -966,11 +969,14 @@ async function renderStickerCover(coverEl, dayLogs) {
     image.className = "cover-sticker";
     image.src = url;
     image.alt = "";
-    const pos = positions[placed % positions.length];
+    // 같은 스티커는 화면을 다시 열어도 같은 위치를 유지한다.
+    const random = createSeededRandom(`${log.sticker_path}:${placed}`);
+    const width = 34 + random() * 8;
     image.style.position = "absolute";
-    image.style.left = pos.left;
-    image.style.top = pos.top;
-    image.style.width = "40%";
+    image.style.left = `${5 + random() * (90 - width)}%`;
+    image.style.top = `${5 + random() * (90 - width)}%`;
+    image.style.width = `${width}%`;
+    image.style.transform = `rotate(${-14 + random() * 28}deg)`;
     coverEl.append(image);
     placed += 1;
   }
