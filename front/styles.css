@@ -4002,6 +4002,11 @@ h1 {
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* 컨트롤은 translateX(-50%)로 가운데 정렬돼 있어서, 그걸 유지하는 별도 keyframe 사용 */
+@keyframes pl-rise-centered {
+  from { opacity: 0; transform: translate(-50%, 40px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 .playlist-player-screen.active .player-record-board {
   animation: pl-disc-emerge 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -4012,7 +4017,7 @@ h1 {
   animation: pl-rise 0.5s ease-out 0.18s both;
 }
 .playlist-player-screen.active .player-controls {
-  animation: pl-rise 0.5s ease-out 0.26s both;
+  animation: pl-rise-centered 0.5s ease-out 0.26s both;
 }
 @media (prefers-reduced-motion: reduce) {
   .playlist-player-screen.active .player-record-board,
