@@ -84,6 +84,7 @@ let currentPlaybackLogs = [];
 let pendingPlaybackIndex = null;
 let pendingPlayerStartLogIndex = null;
 let pendingPlayerAutoPlay = false;
+let playerStatusTimer = null;
 const pendingLogProcessingTasks = new Set();
 
 const appShell = document.querySelector(".app-shell");
@@ -121,6 +122,7 @@ const trackLogPhoto = document.getElementById("track-log-photo");
 const trackLogCaption = document.getElementById("track-log-caption");
 const playerNavButton = document.querySelector(".player-nav-button");
 const playerDate = document.getElementById("player-date");
+const playerStatus = document.getElementById("player-status");
 const playerTitle = document.getElementById("player-title");
 const playerLogPhoto = document.getElementById("player-log-photo");
 const playerLogCaption = document.getElementById("player-log-caption");
@@ -231,6 +233,28 @@ async function initAuth() {
 }
 
 // --- Spotify Web Playback SDK ---
+function showPlayerStatus(message, type = "info", timeout = 7000) {
+  if (!playerStatus) return;
+  if (playerStatusTimer) clearTimeout(playerStatusTimer);
+  playerStatus.textContent = message;
+  playerStatus.dataset.type = type;
+  playerStatus.hidden = false;
+  playerStatusTimer = timeout
+    ? setTimeout(() => {
+        playerStatus.hidden = true;
+        playerStatusTimer = null;
+      }, timeout)
+    : null;
+}
+
+function activateSpotifyForMobileGesture() {
+  if (!spotifyPlayer?.activateElement) return;
+  spotifyPlayer.activateElement().catch((error) => {
+    console.warn("Spotify 모바일 미디어 활성화 실패:", error);
+    showPlayerStatus("모바일 재생 권한을 활성화하지 못했어요. 재생 버튼을 다시 눌러주세요.", "error");
+  });
+}
+
 function trackIdFromSpotifyUrl(url) {
   const match = (url || "").match(/track[/:]([A-Za-z0-9]+)/);
   return match ? match[1] : null;
@@ -252,7 +276,15 @@ async function refreshSpotifyPremiumStatus(token = null) {
     const response = await fetch("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!response.ok) return spotifyIsPremium;
+    if (!response.ok) {
+      if (response.status === 401) {
+        spotifyIsPremium = null;
+        showPlayerStatus("Spotify 로그인이 만료됐어요. 로그아웃한 뒤 Spotify로 다시 로그인해주세요.", "error", 0);
+      } else {
+        showPlayerStatus(`Spotify 계정 확인에 실패했어요. (${response.status})`, "error");
+      }
+      return spotifyIsPremium;
+    }
     const profile = await response.json();
     spotifyIsPremium = profile.product === "premium";
     return spotifyIsPremium;
@@ -300,6 +332,7 @@ async function initSpotifyPlayerIfPossible() {
   spotifyPlayer.addListener("ready", ({ device_id }) => {
     spotifyDeviceId = device_id;
     console.log("Spotify 플레이어 준비 완료, device_id =", device_id);
+    showPlayerStatus("Spotify 연결 완료. 재생 버튼을 눌러주세요.", "info", 3000);
     if (pendingPlaybackIndex !== null && currentTrackUris.length) {
       const startIndex = pendingPlaybackIndex;
       pendingPlaybackIndex = null;
@@ -308,21 +341,35 @@ async function initSpotifyPlayerIfPossible() {
   });
   spotifyPlayer.addListener("not_ready", () => {
     spotifyDeviceId = null;
+    showPlayerStatus("Spotify 연결이 끊겼어요. 오른쪽 위 새로고침 버튼을 눌러주세요.", "error", 0);
   });
-  spotifyPlayer.addListener("initialization_error", ({ message }) =>
-    console.error("Spotify 초기화 실패:", message),
-  );
-  spotifyPlayer.addListener("authentication_error", ({ message }) =>
-    console.error("Spotify 인증 실패:", message),
-  );
+  spotifyPlayer.addListener("initialization_error", ({ message }) => {
+    console.error("Spotify 초기화 실패:", message);
+    showPlayerStatus(`이 모바일 브라우저에서 Spotify 재생을 초기화하지 못했어요. ${message}`, "error", 0);
+  });
+  spotifyPlayer.addListener("authentication_error", ({ message }) => {
+    console.error("Spotify 인증 실패:", message);
+    showPlayerStatus("Spotify 로그인이 만료됐어요. 로그아웃한 뒤 다시 로그인해주세요.", "error", 0);
+  });
   spotifyPlayer.addListener("account_error", ({ message }) => {
     spotifyIsPremium = false;
     console.error("Spotify 계정 오류(Premium 계정이 아니면 재생 불가):", message);
+    showPlayerStatus("앱 안에서 재생하려면 Spotify Premium 계정이 필요해요.", "error", 0);
     if (pendingPlaybackIndex !== null) {
       const fallbackIndex = pendingPlaybackIndex;
       pendingPlaybackIndex = null;
       openTrackInSpotify(fallbackIndex);
     }
+  });
+  spotifyPlayer.addListener("autoplay_failed", () => {
+    console.warn("Spotify 자동 재생이 모바일 브라우저에서 차단됨");
+    showPlayerStatus("모바일 브라우저가 자동 재생을 막았어요. 아래 재생 버튼을 한 번 더 눌러주세요.", "error", 0);
+    setPlayerPlaying(false);
+  });
+  spotifyPlayer.addListener("playback_error", ({ message }) => {
+    console.error("Spotify 재생 오류:", message);
+    showPlayerStatus(`Spotify 재생 오류: ${message}`, "error", 0);
+    setPlayerPlaying(false);
   });
   spotifyPlayer.addListener("player_state_changed", (state) => {
     if (!state) return;
@@ -347,7 +394,10 @@ async function initSpotifyPlayerIfPossible() {
     setPlayerPlaying(!state.paused);
   });
 
-  await spotifyPlayer.connect();
+  const connected = await spotifyPlayer.connect();
+  if (!connected) {
+    showPlayerStatus("Spotify 재생 기기에 연결하지 못했어요. 새로고침 버튼을 눌러 다시 연결해주세요.", "error", 0);
+  }
 }
 
 async function transferPlaybackToThisDevice(token) {
@@ -374,15 +424,18 @@ async function transferPlaybackToThisDevice(token) {
 async function playSpotifyTrackAt(index) {
   if (!spotifyDeviceId) {
     console.warn("재생 불가: Spotify 기기(device_id)가 아직 준비되지 않음 (ready 이벤트 대기 중이거나 Premium 계정이 아닐 수 있음)");
+    showPlayerStatus("Spotify 재생 기기가 아직 준비되지 않았어요. 새로고침 버튼을 누른 뒤 다시 시도해주세요.", "error", 0);
     return;
   }
   if (!currentTrackUris.length) {
     console.warn("재생 불가: 이 날짜에 Spotify 트랙 URI가 없음 (tracks.spotify_url이 비어있을 수 있음)");
+    showPlayerStatus("이 플레이리스트에 재생 가능한 Spotify 곡 주소가 없어요.", "error", 0);
     return;
   }
   const token = await getSpotifyAccessToken();
   if (!token) {
     console.warn("재생 불가: Spotify access token 없음 (DEV_MODE 익명 로그인이거나 세션에 provider_token이 없음)");
+    showPlayerStatus("Spotify 로그인 정보가 없어요. 로그아웃한 뒤 다시 로그인해주세요.", "error", 0);
     return;
   }
   currentTrackIndex = ((index % currentTrackUris.length) + currentTrackUris.length) % currentTrackUris.length;
@@ -408,6 +461,7 @@ async function playSpotifyTrackAt(index) {
     });
     if (response.ok) {
       console.log("[재생 성공]");
+      showPlayerStatus("재생을 시작했어요.", "info", 2500);
       return;
     }
     const body = await response.text().catch(() => "");
@@ -422,6 +476,18 @@ async function playSpotifyTrackAt(index) {
           ? " → device_id가 계속 인식되지 않음. 탭을 새로고침해서 SDK를 다시 연결해보세요"
           : ""),
   );
+  const failureMessage =
+    lastError.status === 401
+      ? "Spotify 로그인이 만료됐어요. 로그아웃한 뒤 다시 로그인해주세요."
+      : lastError.status === 403
+        ? "재생 권한이 없어요. Premium 계정과 Spotify 권한을 확인해주세요."
+        : lastError.status === 404
+          ? "Spotify가 이 모바일 기기를 찾지 못했어요. 새로고침 버튼을 누른 뒤 다시 시도해주세요."
+          : lastError.status === 429
+            ? "Spotify 요청이 너무 많아요. 잠시 후 다시 시도해주세요."
+            : `Spotify 재생 요청에 실패했어요. (${lastError.status})`;
+  showPlayerStatus(failureMessage, "error", 0);
+  setPlayerPlaying(false);
 }
 
 async function startSpotifyPlaybackAt(index = 0) {
@@ -436,12 +502,18 @@ async function startSpotifyPlaybackAt(index = 0) {
     pendingPlaybackIndex = normalizedIndex;
     initSpotifyPlayerIfPossible();
     console.warn("Spotify 플레이어 준비 후 재생을 시작합니다.");
+    showPlayerStatus("Spotify 재생 기기에 연결하는 중이에요. 준비되면 재생을 다시 시도합니다.", "info", 5000);
     return;
   }
   pendingPlaybackIndex = null;
   spotifyPlaybackStarted = true;
   setPlayerPlaying(true);
-  playSpotifyTrackAt(normalizedIndex);
+  playSpotifyTrackAt(normalizedIndex).catch((error) => {
+    console.error("Spotify 재생 처리 실패:", error);
+    showPlayerStatus(`Spotify 재생 처리 중 오류가 발생했어요: ${error.message || error}`, "error", 0);
+    spotifyPlaybackStarted = false;
+    setPlayerPlaying(false);
+  });
 }
 
 // --- 온보딩 값 수집 → Supabase 저장 ---
@@ -1522,6 +1594,8 @@ function syncPlayerLogToPlaybackIndex(playbackIndex) {
 }
 
 function activatePlayerTrack(logIndex, playbackIndex, selectedLog = currentTrackLogs[logIndex]) {
+  // 모바일 브라우저는 재생 호출 전에 사용자 탭 경로에서 미디어 요소를 활성화해야 한다.
+  activateSpotifyForMobileGesture();
   if (Number.isInteger(logIndex) && logIndex >= 0) {
     // 행이 생성될 때 캡처한 로그 객체를 직접 사용한다. 다른 비동기 화면이
     // currentTrackLogs를 갱신하더라도 사용자가 누른 사진/캡션이 정확히 표시된다.
@@ -1578,16 +1652,50 @@ async function renderPlaylistPlayer() {
 
 async function refreshPlaylistPlayer(button) {
   if (button?.disabled) return;
+  // 첫 await 전에 호출해야 iOS가 이 탭을 실제 사용자 미디어 동작으로 인정한다.
+  activateSpotifyForMobileGesture();
   if (button) {
     button.disabled = true;
     button.classList.add("refreshing");
   }
   pendingPlayerAutoPlay = false;
   pendingPlayerStartLogIndex = null;
+  showPlayerStatus("플레이리스트와 Spotify 재생 기기를 다시 연결하는 중이에요.", "info", 0);
   try {
     await renderPlaylistPlayer();
+    const token = await getSpotifyAccessToken();
+    if (!token) {
+      showPlayerStatus("Spotify 로그인 정보가 없거나 만료됐어요. 로그아웃한 뒤 다시 로그인해주세요.", "error", 0);
+      return;
+    }
+    const premium = await refreshSpotifyPremiumStatus(token);
+    if (premium === false) {
+      showPlayerStatus("앱 안에서 재생하려면 Spotify Premium 계정이 필요해요.", "error", 0);
+      return;
+    }
+    if (premium !== true) return;
+
+    if (spotifyPlayer) {
+      spotifyDeviceId = null;
+      spotifyPlaybackStarted = false;
+      spotifyPlayer.disconnect();
+      const connected = await spotifyPlayer.connect();
+      if (!connected) {
+        showPlayerStatus("Spotify 기기 재연결에 실패했어요. 로그아웃 후 다시 로그인해보세요.", "error", 0);
+      } else {
+        showPlayerStatus("Spotify 기기를 다시 연결하고 있어요. 연결 완료 후 재생 버튼을 눌러주세요.", "info", 5000);
+      }
+    } else {
+      await initSpotifyPlayerIfPossible();
+      if (!spotifyPlayer) {
+        showPlayerStatus("Spotify 재생기를 만들지 못했어요. 브라우저 지원 또는 로그인 상태를 확인해주세요.", "error", 0);
+      } else {
+        showPlayerStatus("Spotify 연결을 시작했어요. 연결 완료 후 재생 버튼을 눌러주세요.", "info", 5000);
+      }
+    }
   } catch (error) {
     console.error("플레이리스트 새로고침 실패:", error);
+    showPlayerStatus(`새로고침에 실패했어요: ${error.message || error}`, "error", 0);
   } finally {
     if (button) {
       button.disabled = false;
@@ -2252,6 +2360,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "open-playlist-player") {
+    if (target.dataset.autoplay === "true") activateSpotifyForMobileGesture();
     playerEntryMode = target.dataset.playerEntry || "archive";
     activePlayerDate =
       playerEntryMode === "home" ? todayKstDate() : getActiveArchivePlaylistRow()?.playlist_date || todayKstDate();
@@ -2262,6 +2371,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "play-archive-track") {
+    activateSpotifyForMobileGesture();
     playerEntryMode = "archive";
     activePlayerDate = getActiveArchivePlaylistRow()?.playlist_date || todayKstDate();
     pendingPlayerStartLogIndex = Number(target.dataset.trackIndex || 0);
@@ -2377,6 +2487,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "toggle-player-play") {
+    activateSpotifyForMobileGesture();
     console.log(
       `[재생버튼] spotifyDeviceId=${spotifyDeviceId} currentTrackUris.length=${currentTrackUris.length} spotifyPlaybackStarted=${spotifyPlaybackStarted} isPlayerPlaying=${isPlayerPlaying}`,
     );
@@ -2386,10 +2497,15 @@ document.addEventListener("click", (event) => {
         startSpotifyPlaybackAt(0);
       } else if (spotifyPlayer) {
         setPlayerPlaying(!isPlayerPlaying);
-        spotifyPlayer?.togglePlay().catch((err) => console.error("togglePlay 실패:", err));
+        spotifyPlayer?.togglePlay().catch((err) => {
+          console.error("togglePlay 실패:", err);
+          showPlayerStatus(`재생 상태를 바꾸지 못했어요: ${err.message || err}`, "error", 0);
+          setPlayerPlaying(false);
+        });
       }
     } else {
       console.warn("재생할 Spotify 트랙이 없습니다.");
+      showPlayerStatus("이 플레이리스트에는 재생 가능한 Spotify 곡이 없어요.", "error", 0);
     }
     return;
   }
