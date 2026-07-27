@@ -952,7 +952,56 @@ function createSeededRandom(seed) {
   };
 }
 
-// 그날 로그들의 sticker_path를 케이스 위에 겹쳐 그린다.
+function createStickerLayout(stickerPaths) {
+  const count = stickerPaths.length;
+  if (count === 0) return [];
+
+  const padding = 5;
+  const gap = 4;
+  const maxRotation = 14;
+  const maxRotationRadians = maxRotation * Math.PI / 180;
+  const maxRotatedScale = Math.cos(maxRotationRadians) + Math.sin(maxRotationRadians);
+  const columns = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / columns);
+  const cellWidth = (100 - padding * 2) / columns;
+  const cellHeight = (100 - padding * 2) / rows;
+  const maxWidth = Math.min(38, (Math.min(cellWidth, cellHeight) - gap) / maxRotatedScale);
+  const random = createSeededRandom(`${count}:${stickerPaths.join("\u0000")}`);
+  const slots = Array.from({ length: columns * rows }, (_, index) => ({
+    column: index % columns,
+    row: Math.floor(index / columns),
+  }));
+
+  for (let index = slots.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [slots[index], slots[swapIndex]] = [slots[swapIndex], slots[index]];
+  }
+
+  return stickerPaths.map((_, index) => {
+    const slot = slots[index];
+    const rotation = -maxRotation + random() * maxRotation * 2;
+    const width = maxWidth * (0.9 + random() * 0.1);
+    const radians = rotation * Math.PI / 180;
+    const rotatedSide = width * (Math.abs(Math.cos(radians)) + Math.abs(Math.sin(radians)));
+    const horizontalSlack = Math.max(0, cellWidth - rotatedSide - gap);
+    const verticalSlack = Math.max(0, cellHeight - rotatedSide - gap);
+    const centerX = padding
+      + (slot.column + 0.5) * cellWidth
+      + (random() - 0.5) * horizontalSlack;
+    const centerY = padding
+      + (slot.row + 0.5) * cellHeight
+      + (random() - 0.5) * verticalSlack;
+
+    return {
+      left: centerX - width / 2,
+      top: centerY - width / 2,
+      width,
+      rotation,
+    };
+  });
+}
+
+// 그날 로그들의 sticker_path를 케이스 위에 고르게 분산해 그린다.
 // (플리 편집·완료 화면과 아카이브 커버에서 공용으로 사용)
 async function renderStickerCover(coverEl, dayLogs) {
   if (!coverEl) return;
@@ -960,26 +1009,30 @@ async function renderStickerCover(coverEl, dayLogs) {
   // 재사용처들은 스타일시트에서 이미 position:absolute라 자식 절대배치 기준이 된다.
   // 여기서 relative로 덮어쓰면 <span>(inline 기본값)의 width/height가 무시돼 찌그러짐.
   coverEl.style.overflow = "hidden";
-  let placed = 0;
+  const stickers = [];
   for (const log of dayLogs) {
     if (!log.sticker_path) continue;
     const url = await signedUrl(log.sticker_path);
     if (!url) continue;
+    stickers.push({ path: log.sticker_path, url });
+  }
+
+  const layout = createStickerLayout(stickers.map((sticker) => sticker.path));
+  stickers.forEach((sticker, index) => {
+    const placement = layout[index];
     const image = document.createElement("img");
     image.className = "cover-sticker";
-    image.src = url;
+    image.src = sticker.url;
     image.alt = "";
-    // 같은 스티커는 화면을 다시 열어도 같은 위치를 유지한다.
-    const random = createSeededRandom(`${log.sticker_path}:${placed}`);
-    const width = 34 + random() * 8;
     image.style.position = "absolute";
-    image.style.left = `${5 + random() * (90 - width)}%`;
-    image.style.top = `${5 + random() * (90 - width)}%`;
-    image.style.width = `${width}%`;
-    image.style.transform = `rotate(${-14 + random() * 28}deg)`;
+    image.style.left = `${placement.left}%`;
+    image.style.top = `${placement.top}%`;
+    image.style.width = `${placement.width}%`;
+    image.style.aspectRatio = "1 / 1";
+    image.style.objectFit = "contain";
+    image.style.transform = `rotate(${placement.rotation}deg)`;
     coverEl.append(image);
-    placed += 1;
-  }
+  });
 }
 
 async function renderLatestStickerCover(coverEl, userId, date) {
