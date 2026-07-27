@@ -54,6 +54,22 @@ const logs = [];
 // (오늘/아카이브 어느 날짜를 보고 있든 항상 그 화면이 채운 값을 그대로 씀)
 let currentTrackLogs = [];
 let archiveMonthCounts = Array(12).fill(0);
+// 화면에서 왼쪽부터 보이는 LP 1~31번의 색상. 
+const ARCHIVE_LP_COLORS = [
+  "#F44D07", "#F8F5E6", "#72261C", "#CBE5FE",
+  "#B4CAE0", "#F44D07", "#72261C", "#F8F5E6",
+  "#44654A", "#26422B", "#EDD569", "#FFF6CB",
+  "#F44D07", "#CBE5FE", "#72261C", "#F44D07",
+  "#E17A4F", "#F8F5E6",
+  "#26422B", "#E05959", "#72261C", "#F44D07",
+  "#CBE5FE", "#72261C", "#F8F5E6", "#F44D07",
+  "#F8F5E6", "#AFC1D2", "#CBE5FE", "#26422B",
+  "#FFF3BD",
+];
+const ARCHIVE_LP_SIDE_COLORS = {
+  18: "#E3E0D2",
+  19: "#3F6846",
+};
 let activeMonthPlaylists = [];
 let activeArchiveMonth = getCurrentMonthNumber();
 let activeArchiveYear = getCurrentYearNumber();
@@ -367,8 +383,8 @@ async function initSpotifyPlayerIfPossible() {
     setPlayerPlaying(false);
   });
   spotifyPlayer.addListener("playback_error", ({ message }) => {
-    console.error("Spotify 재생 오류:", message);
-    showPlayerStatus(`Spotify 재생 오류: ${message}`, "error", 0);
+    console.error("Spotify 재생 오류:", message, "새로고침을 눌러주세요");
+    showPlayerStatus(`Spotify 재생 오류: ${message} 새로고침을 눌러주세요`, "error", 0);
     setPlayerPlaying(false);
   });
   spotifyPlayer.addListener("player_state_changed", (state) => {
@@ -1233,15 +1249,77 @@ function renderArchiveShelves() {
   const shelves = document.querySelectorAll(".archive-shelf");
   shelves.forEach((shelf, monthIndex) => {
     shelf.replaceChildren();
-    const count = archiveMonthCounts[monthIndex] || 0;
+    const month = monthIndex + 1;
+    const actualCount = archiveMonthCounts[monthIndex] || 0;
+    const testCount = ARCHIVE_LP_TEST_COUNTS[month] || 0;
+    const count = Math.max(actualCount, testCount);
+    shelf.classList.toggle("test-lp-layout", testCount > actualCount);
     shelf.classList.toggle("empty", count === 0);
-    // 왼쪽부터 딱 붙여서 전부 직립으로 쌓는다. (마지막 1장 기울이는 건 잠시 보류)
-    const lpWidth = 13;
-    for (let index = 0; index < count; index += 1) {
+    const lpWidth = 7;
+    const lpHeight = 120;
+    const leaningAngle = 7;
+    const uprightStep = lpWidth;
+    // 7도 회전된 LP의 수직 폭이 정확히 맞닿도록 수평 간격을 보정한다.
+    const leaningRadians = (leaningAngle * Math.PI) / 180;
+    const leaningGap = lpWidth / Math.cos(leaningRadians);
+    // 기울어진 LP의 윗부분이 직립 LP에 닿되 파고들지 않는 최소 여유.
+    const leaningClearance = lpHeight * Math.sin(leaningRadians);
+    // 직립 LP는 시안처럼 좌우 책장 그림자 위에 일부 겹치고,
+    // 중앙의 비스듬한 묶음은 기존 중심 좌표를 유지한다.
+    const uprightSideInset = 10;
+    const displayCount = Math.min(count, 31);
+    for (let index = 0; index < displayCount; index += 1) {
       const lp = document.createElement("span");
-      lp.className = `archive-lp archive-lp-color-${(index % 6) + 1}`;
-      lp.style.left = `${index * lpWidth}px`;
-      lp.style.zIndex = String(index + 1);
+      const visualPosition = index + 1;
+      lp.className = "archive-lp";
+      lp.style.setProperty("--lp-color", ARCHIVE_LP_COLORS[index]);
+      lp.style.setProperty(
+        "--lp-side-color",
+        ARCHIVE_LP_SIDE_COLORS[visualPosition] || ARCHIVE_LP_COLORS[index],
+      );
+
+      if (index < 12) {
+        // 1~12장: 왼쪽부터 오른쪽으로 직립.
+        lp.classList.add("archive-lp-left-upright");
+        lp.style.left = `${uprightSideInset + index * uprightStep}px`;
+      } else if (index < 18) {
+        // 13~18장: 왼쪽 직립 묶음 다음에서 왼쪽 방향으로 기대어 쌓임.
+        const leaningIndex = index - 12;
+        lp.classList.add("archive-lp-left-leaning");
+        lp.style.left = `${
+          uprightSideInset
+          + 12 * uprightStep
+          + leaningClearance
+          + leaningIndex * leaningGap
+        }px`;
+        if (index === Math.min(displayCount, 18) - 1) {
+          lp.classList.add("archive-lp-left-edge");
+        }
+      } else if (index < 22) {
+        // 화면 왼쪽부터 19~22장: 오른쪽 직립 묶음에 기대는 비스듬한 LP.
+        const leaningIndex = index - 18;
+        const leaningCount = Math.min(Math.max(displayCount - 18, 0), 4);
+        const rightUprightCount = Math.max(displayCount - 22, 0);
+        lp.classList.add("archive-lp-right-leaning");
+        lp.style.right = `${
+          uprightSideInset
+          + rightUprightCount * uprightStep
+          + leaningClearance
+          + (leaningCount - 1 - leaningIndex) * leaningGap
+        }px`;
+        if (index === 18) {
+          lp.classList.add("archive-lp-right-edge");
+        }
+      } else {
+        // 화면 왼쪽부터 23~30장: 똑바로 선 오른쪽 묶음.
+        // 테스트용 31번째 장도 가장 오른쪽에 같은 방식으로 이어진다.
+        lp.classList.add("archive-lp-right-upright");
+        lp.style.right = `${
+          uprightSideInset + (displayCount - 1 - index) * uprightStep
+        }px`;
+      }
+
+      lp.style.zIndex = String(index + 10);
       shelf.append(lp);
     }
   });

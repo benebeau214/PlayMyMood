@@ -2375,17 +2375,15 @@ h1 {
 }
 
 .archive-shelf {
+  --archive-shelf-side-width: 30px;
   position: relative;
   display: block;
   width: 100%;
-  height: 166px;
+  height: 186px;
   margin: 0;
   padding: 0;
-  background: #7b4d36;
-  border-left: 13px solid #6c3f2c;
-  border-right: 13px solid #6c3f2c;
-  border-top: 10px solid #6c3f2c;
-  border-bottom: 0;
+  background: #734A35;
+  border: 0;
   overflow: hidden;
   font: inherit;
   cursor: pointer;
@@ -2396,23 +2394,30 @@ h1 {
 .archive-shelf::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 38px;
-  background: rgba(92, 52, 35, 0.35);
+  inset: 0;
+  z-index: 0;
+  box-shadow:
+    inset var(--archive-shelf-side-width) 0 0 #5E3C2A,
+    inset calc(-1 * var(--archive-shelf-side-width)) 0 0 #5E3C2A;
+  pointer-events: none;
 }
 
 .archive-shelf::after {
   content: "";
   position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: -34px;
-  height: 68px;
-  background: rgba(74, 39, 27, 0.28);
-  transform: perspective(120px) rotateX(46deg);
-  transform-origin: top center;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 46px;
+  background: #68412E;
+  clip-path: polygon(
+    var(--archive-shelf-side-width) 0,
+    calc(100% - var(--archive-shelf-side-width)) 0,
+    100% 100%,
+    0 100%
+  );
+  pointer-events: none;
 }
 
 .archive-pill {
@@ -2435,32 +2440,65 @@ h1 {
   display: none;
 }
 
-/* CSS-drawn archived LPs: 왼쪽에서 오른쪽으로 직립 상태로 쌓인다.
-   레코드 한 장 = 순수 단색 판. 안에 선/하이라이트 없이 깔끔하게. */
+/* CSS-drawn archived LPs: 시안처럼 얇은 단색 LP 책등으로 표시한다. */
 .archive-lp {
+  --lp-color: #F44D07;
+  --lp-side-color: #E17A4F;
   position: absolute;
-  bottom: 30px;
+  bottom: 16px;
   left: 0;
-  width: 13px;
-  height: 128px;
+  width: 7px;
+  height: 120px;
   transform-origin: bottom left;
-  background: #ff6a1a;
+  background: var(--lp-color);
 }
 
-.archive-lp-color-1 { background: #ff6a1a; }
-.archive-lp-color-2 { background: #f6f1d9; }
-.archive-lp-color-3 { background: #7e2a1d; }
-.archive-lp-color-4 { background: #cfe6f5; }
-.archive-lp-color-5 { background: #2e5136; }
-.archive-lp-color-6 { background: #f2dd8c; }
+.archive-lp-color-1 { --lp-color: #F44D07; --lp-side-color: #E17A4F; }
+.archive-lp-color-2 { --lp-color: #F8F5E6; --lp-side-color: #E3E0D2; }
+.archive-lp-color-3 { --lp-color: #72261C; --lp-side-color: #734A35; }
+.archive-lp-color-4 { --lp-color: #CBE5FE; --lp-side-color: #B4CAE0; }
+.archive-lp-color-5 { --lp-color: #26422B; --lp-side-color: #3F6846; }
+.archive-lp-color-6 { --lp-color: #EDD569; --lp-side-color: #FFE682; }
 
-/* 그 달의 가장 마지막(최신) LP: 똑바로 선 나머지와 달리 옆으로 기대어 표시.
-   피벗은 반드시 bottom left — bottom right로 하면 반대쪽 아래 모서리가 선반 바닥 아래로
-   처져서 책장을 벗어나 보인다. 겹침(왼쪽으로 살짝 당기는 정도)은 JS의 left 값에서
-   계산하므로 여기서는 회전만 담당한다. */
-.archive-lp-last {
-  transform: rotate(-18deg);
-  z-index: 1;
+.archive-lp-left-upright,
+.archive-lp-right-upright {
+  transform: rotate(0);
+}
+
+.archive-lp-right-upright,
+.archive-lp-right-leaning {
+  left: auto;
+}
+
+.archive-lp-left-leaning {
+  transform: rotate(-7deg);
+  transform-origin: bottom left;
+}
+
+.archive-lp-right-leaning {
+  transform: rotate(7deg);
+  transform-origin: bottom right;
+}
+
+/* 중앙을 향한 양쪽 마지막 LP에만 측면을 노출해 시안의 입체감을 만든다. */
+.archive-lp-left-edge::after,
+.archive-lp-right-edge::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 19px;
+  height: 120px;
+  background: var(--lp-side-color);
+}
+
+.archive-lp-left-edge::after {
+  left: calc(100% - 0.5px);
+  clip-path: polygon(0 0, 100% 5%, 100% 95%, 0 100%);
+}
+
+.archive-lp-right-edge::before {
+  right: calc(100% - 0.5px);
+  clip-path: polygon(100% 0, 0 5%, 0 95%, 100% 100%);
 }
 
 /* Archive month carousel and playlist detail */
@@ -2744,6 +2782,8 @@ h1 {
 .player-log-polaroid p {
   margin: 7px 0 0;
   color: #111;
+  font-family: "Kyobo Handwriting 2021", cursive;
+  font-weight: 400;
   font-size: 0.43rem;
   line-height: 1.25;
   white-space: nowrap;
@@ -3094,27 +3134,35 @@ h1 {
 
 .track-log-modal.player-log-modal .track-log-polaroid {
   top: 58px;
-  width: 158px;
-  height: 202px;
-  padding: 9px 9px 30px;
+  width: 260px;
+  height: 340px;
+  padding: 10px 10px 70px;
 }
 
 .track-log-modal.player-log-modal .track-log-photo {
-  height: 142px;
+  height: 215px;
 }
 
 .track-log-modal.player-log-modal .track-log-caption {
   margin-top: 7px;
   font-size: 15px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .track-log-modal.player-log-modal .track-log-card h2 {
-  top: 304px;
-  font-size: 0.8rem;
+  display: none;
 }
 
 .track-log-modal.player-log-modal .track-log-staff {
-  top: 349px;
+  top: 420px;
 }
 .player-nav-button.home-mode {
   width: 31px;
