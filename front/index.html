@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Play My Mood</title>
     <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
     <!-- PWA: 홈 화면에 추가 후 아이콘으로 실행하면 주소창 없이 전체화면 -->
@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Play My Mood" />
     <link rel="apple-touch-icon" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260726-canvas-402x874" />
+    <link rel="stylesheet" href="./styles.css?v=20260727-mobile-caption-keyboard" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
@@ -195,11 +195,7 @@
           <span id="archive-detail-title">2026.07</span>
           <button class="archive-month-nav" type="button" aria-label="다음 월">&gt;</button>
         </header>
-        <p class="archive-detail-date" id="archive-detail-date">2026.07.16</p>
-        <button class="archive-detail-cover" type="button" aria-label="앨범 커버">
-          <span class="archive-detail-square"></span>
-          <img class="archive-detail-record" src="./assets/playlist-record.png" alt="" />
-        </button>
+        <div class="archive-detail-carousel" id="archive-detail-carousel" aria-label="플레이리스트 커버 목록"></div>
         <h1 class="archive-detail-name" id="archive-detail-name">커피 맛</h1>
         <section class="archive-detail-tracks" aria-label="플리 목록">
           <div class="archive-detail-track"><span></span><p>Lemonade<br />aespa</p></div>
@@ -212,6 +208,7 @@
       <section class="screen playlist-player-screen" id="playlist-player-screen" aria-label="플레이리스트 재생">
         <button class="player-nav-button player-back-button" type="button" data-action="player-nav" aria-label="뒤로">←</button>
         <p class="player-date" id="player-date">2026.06.11</p>
+        <button class="player-refresh-button" type="button" data-action="refresh-player" aria-label="플레이리스트 새로고침">↻</button>
         <div class="player-hero" aria-label="플레이리스트 커버">
           <div class="player-record-board" aria-hidden="true">
             <span class="player-board-base"></span>
@@ -400,7 +397,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js"></script>
-    <script src="./app.js?v=20260726-polaroid-group-gap"></script>
+    <script src="./app.js?v=20260727-mobile-caption-keyboard"></script>
   </body>
 </html>
 

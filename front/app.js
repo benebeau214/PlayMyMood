@@ -59,6 +59,9 @@ let activeArchiveMonth = getCurrentMonthNumber();
 let activeArchiveYear = getCurrentYearNumber();
 let activeArchivePlaylistIndex = 0;
 let archiveCarouselFrame = null;
+let archiveDetailCarouselFrame = null;
+let archiveDetailRenderToken = 0;
+let archiveMonthSwipeStart = null;
 let activePlayerDate = null;
 let pendingNote = "";
 let completeTimer = null;
@@ -77,11 +80,13 @@ let currentTrackUris = [];
 let currentTrackSpotifyUrls = [];
 let currentTrackIndex = 0;
 let currentTrackPlaybackIndexes = [];
+let currentPlaybackLogs = [];
 let pendingPlaybackIndex = null;
 let pendingPlayerStartLogIndex = null;
 let pendingPlayerAutoPlay = false;
 const pendingLogProcessingTasks = new Set();
 
+const appShell = document.querySelector(".app-shell");
 const polaroidList = document.getElementById("polaroid-list");
 const playlistButton = document.getElementById("playlist-button");
 const recordNoteInput = document.getElementById("record-note");
@@ -103,11 +108,12 @@ const emotionStaff = document.querySelector(".emotion-staff");
 const playlistTitleInput = document.getElementById("playlist-title");
 const playlistIntroInput = document.querySelector(".playlist-intro-input");
 const archiveMonthTitle = document.getElementById("archive-month-title");
+const archiveMonthScreen = document.getElementById("archive-month-screen");
 const archiveMonthCarousel = document.getElementById("archive-month-carousel");
 const archiveMonthPlaylistTitle = document.getElementById("archive-month-playlist-title");
 const archiveMonthPlaylistDesc = document.getElementById("archive-month-playlist-desc");
 const archiveDetailTitle = document.getElementById("archive-detail-title");
-const archiveDetailDate = document.getElementById("archive-detail-date");
+const archiveDetailCarousel = document.getElementById("archive-detail-carousel");
 const archiveDetailName = document.getElementById("archive-detail-name");
 const trackLogModal = document.getElementById("track-log-modal");
 const trackLogDate = document.getElementById("track-log-date");
@@ -122,6 +128,7 @@ const playerRecordBoard = document.querySelector(".player-record-board");
 const playerPlayButton = document.querySelector(".player-play");
 let cameraStream = null;
 let cameraFacingMode = "environment";
+let activeCameraIsFront = false;
 let flashEnabled = false;
 let capturedPhotoDataUrl = "";
 let isRetakingPhoto = false;
@@ -190,6 +197,7 @@ async function logout() {
   currentTrackUris = [];
   currentTrackSpotifyUrls = [];
   currentTrackPlaybackIndexes = [];
+  currentPlaybackLogs = [];
   pendingPlaybackIndex = null;
   pendingPlayerStartLogIndex = null;
   pendingPlayerAutoPlay = false;
@@ -320,8 +328,11 @@ async function initSpotifyPlayerIfPossible() {
     if (!state) return;
     const currentUri = state.track_window?.current_track?.uri;
     const playingIndex = currentTrackUris.indexOf(currentUri);
-    if (playingIndex >= 0) {
+    if (playingIndex >= 0 && !state.paused) {
       currentTrackIndex = playingIndex;
+      // 기기 이전 중 전달되는 이전 곡의 paused 상태가 사용자가 방금 고른
+      // 폴라로이드를 다시 덮어쓰지 않게, 실제 재생 상태에서만 동기화한다.
+      syncPlayerLogToPlaybackIndex(playingIndex);
       document.querySelectorAll("#playlist-player-screen .player-track").forEach((row) => {
         row.classList.toggle("current", Number(row.dataset.playbackIndex) === playingIndex);
       });
@@ -907,10 +918,41 @@ function getNearestZoomLabel(value) {
   return nearest;
 }
 
+function updateCameraPreviewTransform() {
+  const zoom = Number(zoomSlider?.value || 1);
+  cameraPreview?.classList.toggle("front-camera", activeCameraIsFront);
+  if (cameraVideo) {
+    cameraVideo.style.setProperty("--camera-mirror-x", activeCameraIsFront ? "-1" : "1");
+    cameraVideo.style.setProperty("--camera-zoom", String(zoom));
+  }
+}
+
+function syncActualCameraFacingMode() {
+  const track = cameraStream?.getVideoTracks?.()[0];
+  if (!track) return;
+  const settings = track.getSettings?.() || {};
+  const actualFacingMode = String(settings.facingMode || "").toLowerCase();
+  const trackLabel = String(track.label || "").toLowerCase();
+  if (actualFacingMode === "user") {
+    cameraFacingMode = "user";
+    activeCameraIsFront = true;
+  } else if (actualFacingMode === "environment") {
+    cameraFacingMode = "environment";
+    activeCameraIsFront = false;
+  } else if (/front|user|facetime/.test(trackLabel)) {
+    cameraFacingMode = "user";
+    activeCameraIsFront = true;
+  } else if (/back|rear|environment/.test(trackLabel)) {
+    cameraFacingMode = "environment";
+    activeCameraIsFront = false;
+  }
+  updateCameraPreviewTransform();
+}
+
 function applyZoom() {
+  updateCameraPreviewTransform();
   if (!zoomSlider) return;
   const zoom = Number(zoomSlider.value || 1);
-  if (cameraVideo) cameraVideo.style.transform = `scale(${zoom})`;
   const activeLabel = getNearestZoomLabel(zoom);
   for (const label of zoomLabels) {
     label.classList.toggle("active", label === activeLabel);
@@ -938,6 +980,9 @@ function stopCamera() {
 async function startCamera() {
   if (!navigator.mediaDevices?.getUserMedia || !cameraVideo) return;
   stopCamera();
+  // 스트림을 기다리는 동안에도 전면/후면 방향을 즉시 미리보기에 반영한다.
+  activeCameraIsFront = cameraFacingMode === "user";
+  updateCameraPreviewTransform();
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: cameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
@@ -946,6 +991,7 @@ async function startCamera() {
     cameraVideo.srcObject = cameraStream;
     cameraPreview?.classList.add("has-stream");
     await cameraVideo.play();
+    syncActualCameraFacingMode();
     applyZoom();
   } catch (error) {
     cameraPreview?.classList.remove("has-stream");
@@ -1013,7 +1059,17 @@ function captureCurrentFrame() {
 
   context.fillStyle = "#e9e9e9";
   context.fillRect(0, 0, cameraCanvas.width, cameraCanvas.height);
-  context.drawImage(cameraVideo, renderedX, renderedY, renderedWidth, renderedHeight);
+  if (activeCameraIsFront) {
+    // 전면 미리보기와 저장 결과가 동일하도록 캔버스 전체를 중심 기준으로 좌우반전한다.
+    context.save();
+    context.translate(cameraCanvas.width, 0);
+    context.scale(-1, 1);
+    context.drawImage(cameraVideo, renderedX, renderedY, renderedWidth, renderedHeight);
+    context.restore();
+  } else {
+    // 후면 카메라는 기존 방향과 크롭을 그대로 유지한다.
+    context.drawImage(cameraVideo, renderedX, renderedY, renderedWidth, renderedHeight);
+  }
   capturedPhotoDataUrl = cameraCanvas.toDataURL("image/jpeg", 0.9);
   updateCapturedPhotoPreview();
   return true;
@@ -1145,6 +1201,15 @@ function selectArchivePlaylist(index) {
   });
 }
 
+function centerArchivePlaylistCard(index, behavior = "auto") {
+  if (!archiveMonthCarousel) return;
+  const cards = Array.from(archiveMonthCarousel.querySelectorAll(".archive-album-card"));
+  const card = cards[index];
+  if (!card) return;
+  const left = card.offsetLeft + card.offsetWidth / 2 - archiveMonthCarousel.clientWidth / 2;
+  archiveMonthCarousel.scrollTo({ left, behavior });
+}
+
 function syncArchivePlaylistToCarousel() {
   if (!archiveMonthCarousel || !activeMonthPlaylists.length) return;
   const cards = Array.from(archiveMonthCarousel.querySelectorAll(".archive-album-card"));
@@ -1161,20 +1226,6 @@ function syncArchivePlaylistToCarousel() {
     }
   });
   selectArchivePlaylist(closestIndex);
-}
-
-async function firstStickerUrlForDate(userId, date) {
-  const { data, error } = await sb
-    .from("daily_logs")
-    .select("sticker_path")
-    .eq("user_id", userId)
-    .eq("log_date", date)
-    .not("sticker_path", "is", null)
-    .order("logged_at")
-    .limit(1)
-    .maybeSingle();
-  if (error || !data?.sticker_path) return null;
-  return signedUrl(data.sticker_path);
 }
 
 async function renderArchiveMonthView(month = activeArchiveMonth) {
@@ -1224,31 +1275,123 @@ async function renderArchiveMonthView(month = activeArchiveMonth) {
     archiveMonthCarousel?.append(card);
   });
 
-  selectArchivePlaylist(0);
+  const today = todayKstDate();
+  const todayIndex = activeMonthPlaylists.findIndex((playlist) => playlist.playlist_date === today);
+  const initialIndex = todayIndex >= 0 ? todayIndex : activeMonthPlaylists.length - 1;
+  selectArchivePlaylist(initialIndex);
   requestAnimationFrame(() => {
-    archiveMonthCarousel?.scrollTo({ left: 0, behavior: "auto" });
+    centerArchivePlaylistCard(initialIndex);
   });
 
-  // 카드별 커버(그날 첫 스티커)를 비동기로 채운다.
+  // 상세 화면과 동일하게 그날의 모든 스티커를 카드별 커버에 배치한다.
   const cards = archiveMonthCarousel ? Array.from(archiveMonthCarousel.querySelectorAll(".archive-album-card")) : [];
-  for (let index = 0; index < activeMonthPlaylists.length; index += 1) {
-    const coverEl = cards[index]?.querySelector(".archive-album-cover");
-    if (!coverEl) continue;
-    const stickerUrl = await firstStickerUrlForDate(userId, activeMonthPlaylists[index].playlist_date);
-    if (stickerUrl) {
-      coverEl.style.backgroundImage = `url("${stickerUrl}")`;
-      coverEl.style.backgroundSize = "cover";
-      coverEl.style.backgroundPosition = "center";
-    }
-  }
+  await Promise.all(
+    activeMonthPlaylists.map(async (playlist, index) => {
+      const coverEl = cards[index]?.querySelector(".archive-album-cover");
+      if (!coverEl) return;
+      await renderLatestStickerCover(coverEl, userId, playlist.playlist_date);
+    }),
+  );
 }
 
 function getActiveArchivePlaylistRow() {
   return activeMonthPlaylists[activeArchivePlaylistIndex] || null;
 }
 
-async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
-  activeArchivePlaylistIndex = index;
+function selectArchiveDetailPlaylist(index) {
+  if (!activeMonthPlaylists.length) return;
+  activeArchivePlaylistIndex = Math.max(0, Math.min(index, activeMonthPlaylists.length - 1));
+  archiveDetailCarousel?.querySelectorAll(".archive-detail-cover-card").forEach((card, cardIndex) => {
+    card.setAttribute("aria-current", cardIndex === activeArchivePlaylistIndex ? "true" : "false");
+  });
+}
+
+function centerArchiveDetailCard(index, behavior = "auto") {
+  if (!archiveDetailCarousel) return;
+  const cards = Array.from(archiveDetailCarousel.querySelectorAll(".archive-detail-cover-card"));
+  const card = cards[index];
+  if (!card) return;
+  const left = card.offsetLeft + card.offsetWidth / 2 - archiveDetailCarousel.clientWidth / 2;
+  archiveDetailCarousel.scrollTo({ left, behavior });
+}
+
+function syncArchiveDetailToCarousel() {
+  if (!archiveDetailCarousel || !activeMonthPlaylists.length) return;
+  const cards = Array.from(archiveDetailCarousel.querySelectorAll(".archive-detail-cover-card"));
+  if (!cards.length) return;
+  const carouselCenter = archiveDetailCarousel.scrollLeft + archiveDetailCarousel.clientWidth / 2;
+  let closestIndex = 0;
+  let closestDistance = Number.POSITIVE_INFINITY;
+  cards.forEach((card, index) => {
+    const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+    const distance = Math.abs(cardCenter - carouselCenter);
+    if (distance < closestDistance) {
+      closestIndex = index;
+      closestDistance = distance;
+    }
+  });
+  if (closestIndex !== activeArchivePlaylistIndex) {
+    renderArchivePlaylistDetail(closestIndex, { rebuildCarousel: false, center: false });
+  }
+}
+
+function buildArchiveDetailCarousel() {
+  if (!archiveDetailCarousel) return;
+  archiveDetailCarousel.replaceChildren();
+  activeMonthPlaylists.forEach((playlist, index) => {
+    const card = document.createElement("button");
+    card.className = "archive-detail-cover-card";
+    card.type = "button";
+    card.dataset.archiveIndex = String(index);
+    card.setAttribute("aria-label", `${formatDisplayDate(playlist.playlist_date)} 플레이리스트`);
+
+    const date = document.createElement("span");
+    date.className = "archive-detail-date";
+    date.textContent = formatDisplayDate(playlist.playlist_date);
+
+    const cover = document.createElement("span");
+    cover.className = "archive-detail-cover";
+    const square = document.createElement("span");
+    square.className = "archive-detail-square";
+    const record = document.createElement("img");
+    record.className = "archive-detail-record";
+    record.src = "./assets/playlist-record.png";
+    record.alt = "";
+
+    cover.append(square, record);
+    card.append(date, cover);
+    archiveDetailCarousel.append(card);
+  });
+  selectArchiveDetailPlaylist(activeArchivePlaylistIndex);
+}
+
+async function hydrateArchiveDetailCovers(userId) {
+  if (!sb || !archiveDetailCarousel || !userId) return;
+  const cards = Array.from(archiveDetailCarousel.querySelectorAll(".archive-detail-cover-card"));
+  await Promise.all(
+    activeMonthPlaylists.map(async (playlist, index) => {
+      const card = cards[index];
+      const square = card?.querySelector(".archive-detail-square");
+      if (!square) return;
+      const { data, error } = await sb
+        .from("daily_logs")
+        .select("sticker_path")
+        .eq("user_id", userId)
+        .eq("log_date", playlist.playlist_date)
+        .order("logged_at");
+      if (error) {
+        console.error("상세 캐러셀 커버 로드 실패:", error.message);
+        return;
+      }
+      if (card.isConnected) await renderStickerCover(square, data || []);
+    }),
+  );
+}
+
+async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex, options = {}) {
+  if (!activeMonthPlaylists.length) return;
+  selectArchiveDetailPlaylist(index);
+  const renderToken = ++archiveDetailRenderToken;
   const playlist = getActiveArchivePlaylistRow();
   if (archiveDetailTitle) archiveDetailTitle.textContent = formatArchiveMonth(activeArchiveMonth);
 
@@ -1256,15 +1399,26 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
   tracksSection?.querySelectorAll(".archive-detail-track").forEach((row) => row.remove());
 
   if (!playlist) {
-    if (archiveDetailDate) archiveDetailDate.textContent = "";
     if (archiveDetailName) archiveDetailName.textContent = "";
     return;
   }
-  if (archiveDetailDate) archiveDetailDate.textContent = formatDisplayDate(playlist.playlist_date);
   if (archiveDetailName) archiveDetailName.textContent = playlist.title || "제목 없는 플리";
 
   const userId = await currentUserId();
   if (!userId) return;
+
+  const cardCount = archiveDetailCarousel?.querySelectorAll(".archive-detail-cover-card").length || 0;
+  if (options.rebuildCarousel !== false || cardCount !== activeMonthPlaylists.length) {
+    buildArchiveDetailCarousel();
+    hydrateArchiveDetailCovers(userId).catch((error) =>
+      console.error("상세 캐러셀 커버 표시 실패:", error),
+    );
+  } else {
+    selectArchiveDetailPlaylist(activeArchivePlaylistIndex);
+  }
+  if (options.center !== false) {
+    requestAnimationFrame(() => centerArchiveDetailCard(activeArchivePlaylistIndex));
+  }
 
   const { data: dayLogs, error } = await sb
     .from("daily_logs")
@@ -1276,10 +1430,16 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
     console.error("아카이브 상세 로드 실패:", error.message);
     return;
   }
+  if (renderToken !== archiveDetailRenderToken) return;
 
-  await renderStickerCover(document.querySelector("#archive-playlist-detail-screen .archive-detail-square"), dayLogs || []);
+  const activeCard = archiveDetailCarousel?.querySelector(
+    `.archive-detail-cover-card[data-archive-index="${activeArchivePlaylistIndex}"]`,
+  );
+  await renderStickerCover(activeCard?.querySelector(".archive-detail-square"), dayLogs || []);
+  if (renderToken !== archiveDetailRenderToken) return;
 
-  currentTrackLogs = [];
+  const nextTrackLogs = [];
+  const trackRows = [];
   if (tracksSection) {
     for (let index = 0; index < (dayLogs || []).length; index += 1) {
       const log = dayLogs[index];
@@ -1292,6 +1452,7 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
       row.tabIndex = 0;
       const thumb = document.createElement("span");
       const photoUrl = await signedUrl(log.photo_path);
+      if (renderToken !== archiveDetailRenderToken) return;
       if (photoUrl) {
         thumb.style.backgroundImage = `url("${photoUrl}")`;
         thumb.style.backgroundSize = "cover";
@@ -1301,7 +1462,7 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
       const title = track?.title || "추천 곡 준비중";
       const artist = (track?.artists && track.artists[0]) || "";
       info.innerHTML = `${title}<br />${artist}`;
-      currentTrackLogs[index] = {
+      nextTrackLogs[index] = {
         caption: log.caption,
         photo: photoUrl,
         date: formatDisplayDate(playlist.playlist_date),
@@ -1318,8 +1479,11 @@ async function renderArchivePlaylistDetail(index = activeArchivePlaylistIndex) {
       more.textContent = "•••";
 
       row.append(thumb, info, more);
-      tracksSection.append(row);
+      trackRows.push(row);
     }
+    if (renderToken !== archiveDetailRenderToken) return;
+    currentTrackLogs = nextTrackLogs;
+    tracksSection.append(...trackRows);
   }
 }
 
@@ -1328,6 +1492,49 @@ function setPlayerPlaying(isPlaying) {
   playerRecordBoard?.classList.toggle("is-playing", isPlayerPlaying);
   playerPlayButton?.classList.toggle("is-playing", isPlayerPlaying);
   playerPlayButton?.setAttribute("aria-label", isPlayerPlaying ? "일시정지" : "재생");
+}
+
+function renderPlayerLogData(log) {
+  // 클릭 시점의 실제 플레이어 DOM을 다시 조회한다. 썸네일과 동일한 signed URL을
+  // background-image에 직접 적용해 이전 <img>가 남거나 다른 화면 참조가 섞이지 않게 한다.
+  const photoElement = document.querySelector("#playlist-player-screen #player-log-photo");
+  const captionElement = document.querySelector("#playlist-player-screen #player-log-caption");
+  if (photoElement) {
+    photoElement.replaceChildren();
+    photoElement.classList.toggle("has-photo", Boolean(log?.photo));
+    photoElement.style.backgroundImage = log?.photo ? `url("${log.photo}")` : "none";
+    photoElement.style.backgroundSize = "cover";
+    photoElement.style.backgroundPosition = "center";
+    photoElement.dataset.logPhoto = log?.photo || "";
+  }
+  if (captionElement) {
+    captionElement.textContent = log ? log.caption || "" : "아직 이 노래와 연결된 로그가 없어요";
+  }
+}
+
+function renderPlayerLogPolaroid(logIndex = 0) {
+  renderPlayerLogData(currentTrackLogs[logIndex]);
+}
+
+function syncPlayerLogToPlaybackIndex(playbackIndex) {
+  const log = currentPlaybackLogs[playbackIndex];
+  if (log) renderPlayerLogData(log);
+}
+
+function activatePlayerTrack(logIndex, playbackIndex, selectedLog = currentTrackLogs[logIndex]) {
+  if (Number.isInteger(logIndex) && logIndex >= 0) {
+    // 행이 생성될 때 캡처한 로그 객체를 직접 사용한다. 다른 비동기 화면이
+    // currentTrackLogs를 갱신하더라도 사용자가 누른 사진/캡션이 정확히 표시된다.
+    renderPlayerLogData(selectedLog);
+    document.querySelectorAll("#playlist-player-screen .player-track").forEach((row) => {
+      row.classList.toggle("current", Number(row.dataset.trackIndex) === logIndex);
+    });
+  }
+  if (Number.isInteger(playbackIndex) && playbackIndex >= 0) {
+    startSpotifyPlaybackAt(playbackIndex);
+  } else {
+    console.warn("재생할 Spotify 트랙 URL이 없습니다.");
+  }
 }
 
 async function renderPlaylistPlayer() {
@@ -1369,10 +1576,31 @@ async function renderPlaylistPlayer() {
   }
 }
 
+async function refreshPlaylistPlayer(button) {
+  if (button?.disabled) return;
+  if (button) {
+    button.disabled = true;
+    button.classList.add("refreshing");
+  }
+  pendingPlayerAutoPlay = false;
+  pendingPlayerStartLogIndex = null;
+  try {
+    await renderPlaylistPlayer();
+  } catch (error) {
+    console.error("플레이리스트 새로고침 실패:", error);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.classList.remove("refreshing");
+    }
+  }
+}
+
 async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
   currentTrackUris = [];
   currentTrackSpotifyUrls = [];
   currentTrackPlaybackIndexes = [];
+  currentPlaybackLogs = [];
   const userId = await currentUserId();
   if (!userId) return;
   const { data: logRows, error } = await sb
@@ -1388,26 +1616,10 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
   const dayLogs = logRows || [];
   renderPlayerMoodNotes(dayLogs);
 
-  // 대표 로그 사진/캡션을 실제 저장 데이터로(새로고침해도 유지되게)
-  const first = dayLogs[0];
+  // 트랙별 로그를 채우기 전에는 이전 화면의 대표 사진이 남지 않게 비운다.
   if (playerLogPhoto) playerLogPhoto.replaceChildren();
   if (playerLogPhoto) playerLogPhoto.classList.remove("has-photo");
-  if (playerLogCaption) {
-    playerLogCaption.textContent = first ? first.caption || "" : "아직 이 노래와 연결된 로그가 없어요";
-  }
-  if (first) {
-    if (playerLogPhoto) {
-      const url = await signedUrl(first.photo_path);
-      if (url) {
-        playerLogPhoto.replaceChildren();
-        playerLogPhoto.classList.add("has-photo");
-        const image = document.createElement("img");
-        image.src = url;
-        image.alt = "대표 로그 사진";
-        playerLogPhoto.append(image);
-      }
-    }
-  }
+  if (playerLogCaption) playerLogCaption.textContent = "";
 
   // 트랙 목록: 로그 사진 + 추천 곡(제목/가수)
   const list = document.querySelector("#playlist-player-screen .player-track-list");
@@ -1441,13 +1653,20 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
       thumb.style.backgroundSize = "cover";
       thumb.style.backgroundPosition = "center";
     }
-    currentTrackLogs[index] = {
+    const trackLog = {
       caption: log.caption,
       photo: photoUrl,
       date: formatDisplayDate(date),
       time: formatDisplayTime(log.logged_at),
       moodNotes: emotionNoteSources(log.emotions),
     };
+    currentTrackLogs[index] = trackLog;
+    if (playbackIndex >= 0) currentPlaybackLogs[playbackIndex] = trackLog;
+    row.addEventListener("click", (event) => {
+      if (event.target.closest(".player-track-more")) return;
+      event.stopPropagation();
+      activatePlayerTrack(index, playbackIndex, trackLog);
+    });
 
     const strong = document.createElement("strong");
     const title = track?.title || "추천 곡 준비중";
@@ -1465,6 +1684,7 @@ async function renderPlayerTracks(date = activePlayerDate || todayKstDate()) {
     row.append(thumb, strong, more);
     list.append(row);
   }
+  renderPlayerLogPolaroid(0);
 }
 
 function getTrackLog(index) {
@@ -1860,6 +2080,13 @@ function updateCaptionCharacterCount() {
   noteCharacterCount.textContent = `(${limitedValue.length}/${MAX_CAPTION_LENGTH})`;
 }
 
+function syncCaptionKeyboardLayout() {
+  const isMobile = window.matchMedia("(max-width: 600px)").matches;
+  const isCaptionFocused = document.activeElement === recordNoteInput;
+  appShell?.classList.toggle("caption-keyboard-open", isMobile && isCaptionFocused);
+  if (isMobile && isCaptionFocused) updateAppScale();
+}
+
 function finishCaptionEntry() {
   if (!recordNoteInput) return;
   pendingNote = recordNoteInput.value.trim().slice(0, MAX_CAPTION_LENGTH);
@@ -1868,12 +2095,16 @@ function finishCaptionEntry() {
 }
 
 recordNoteInput?.addEventListener("input", updateCaptionCharacterCount);
+recordNoteInput?.addEventListener("focus", syncCaptionKeyboardLayout);
+recordNoteInput?.addEventListener("blur", syncCaptionKeyboardLayout);
 recordNoteInput?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.isComposing) return;
   event.preventDefault();
   finishCaptionEntry();
 });
 updateCaptionCharacterCount();
+window.visualViewport?.addEventListener("resize", syncCaptionKeyboardLayout);
+window.visualViewport?.addEventListener("scroll", syncCaptionKeyboardLayout);
 
 archiveMonthCarousel?.addEventListener("scroll", () => {
   if (archiveCarouselFrame !== null) cancelAnimationFrame(archiveCarouselFrame);
@@ -1881,6 +2112,55 @@ archiveMonthCarousel?.addEventListener("scroll", () => {
     archiveCarouselFrame = null;
     syncArchivePlaylistToCarousel();
   });
+});
+
+archiveDetailCarousel?.addEventListener("scroll", () => {
+  if (archiveDetailCarouselFrame !== null) cancelAnimationFrame(archiveDetailCarouselFrame);
+  archiveDetailCarouselFrame = requestAnimationFrame(() => {
+    archiveDetailCarouselFrame = null;
+    syncArchiveDetailToCarousel();
+  });
+});
+
+archiveMonthScreen?.addEventListener(
+  "touchstart",
+  (event) => {
+    const touch = event.changedTouches[0];
+    const swipeArea = event.target.closest(".archive-month-carousel, .archive-month-copy");
+    const touchedCard = event.target.closest(".archive-album-card");
+    if (!touch || !swipeArea || (touchedCard && touchedCard.getAttribute("aria-current") !== "true")) {
+      archiveMonthSwipeStart = null;
+      return;
+    }
+    archiveMonthSwipeStart = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  },
+  { passive: true },
+);
+
+archiveMonthScreen?.addEventListener(
+  "touchend",
+  (event) => {
+    if (!archiveMonthSwipeStart) return;
+    const touch = event.changedTouches[0];
+    const start = archiveMonthSwipeStart;
+    archiveMonthSwipeStart = null;
+    if (!touch || !activeMonthPlaylists.length) return;
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const isQuickEnough = Date.now() - start.time < 1000;
+    const isUpwardSwipe = deltaY <= -55 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2;
+    if (!isQuickEnough || !isUpwardSwipe) return;
+    showScreen(screens.indexOf("archive-playlist-detail-screen"));
+  },
+  { passive: true },
+);
+
+archiveMonthScreen?.addEventListener("touchcancel", () => {
+  archiveMonthSwipeStart = null;
 });
 
 document.addEventListener("keydown", (event) => {
@@ -1916,6 +2196,11 @@ document.addEventListener("click", (event) => {
 
   if (target.classList.contains("log-polaroid")) {
     bringPolaroidToFront(target);
+    return;
+  }
+
+  if (target.classList.contains("archive-detail-cover-card")) {
+    centerArchiveDetailCard(Number(target.dataset.archiveIndex || 0), "smooth");
     return;
   }
 
@@ -1986,12 +2271,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "play-player-track") {
+    const logIndex = Number(target.dataset.trackIndex);
     const playbackIndex = Number(target.dataset.playbackIndex);
-    if (Number.isInteger(playbackIndex) && playbackIndex >= 0) {
-      startSpotifyPlaybackAt(playbackIndex);
-    } else {
-      console.warn("재생할 Spotify 트랙 URL이 없습니다.");
-    }
+    activatePlayerTrack(logIndex, playbackIndex);
     return;
   }
 
@@ -2039,6 +2321,8 @@ document.addEventListener("click", (event) => {
 
   if (action === "switch-camera") {
     cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+    activeCameraIsFront = cameraFacingMode === "user";
+    updateCameraPreviewTransform();
     startCamera();
     return;
   }
@@ -2107,6 +2391,11 @@ document.addEventListener("click", (event) => {
     } else {
       console.warn("재생할 Spotify 트랙이 없습니다.");
     }
+    return;
+  }
+
+  if (action === "refresh-player") {
+    refreshPlaylistPlayer(target);
     return;
   }
 
