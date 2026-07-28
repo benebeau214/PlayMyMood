@@ -23,6 +23,7 @@ from supabase import create_client
 
 from agent.mood_intake_agent import EmotionLog, analyze_daily_logs
 from agent.mood_music_agent import recommend_music, select_best_track
+from agent.spotify_track_validator import filter_playable_spotify_tracks
 
 # 스티커 에이전트는 Replicate 토큰이 있을 때만 동작하므로 선택적으로 import.
 try:
@@ -80,6 +81,7 @@ class ProcessLogRequest(BaseModel):
 class GeneratePlaylistRequest(BaseModel):
     user_id: str
     date: str  # log_date, "YYYY-MM-DD"
+    spotify_access_token: str | None = None
 
 
 def _load_music_preferences(user_id: str) -> dict[str, Any]:
@@ -254,6 +256,15 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         recommendations = result.get("recommendations") or []
         if not recommendations:
             continue
+        recommendations, playability = filter_playable_spotify_tracks(
+            recommendations,
+            request.spotify_access_token,
+        )
+        print(f"[service] Spotify playability log {log['id']}: {playability}")
+        if not recommendations:
+            print(f"[service] no playable Spotify candidates for log {log['id']}")
+            continue
+        result = {**result, "recommendations": recommendations}
         top = recommendations[0]
         try:
             final_selection = select_best_track(

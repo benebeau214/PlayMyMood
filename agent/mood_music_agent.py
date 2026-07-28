@@ -361,7 +361,7 @@ class AnthropicMoodClient:
                 {
                     "role": "user",
                     "content": (
-                        "Choose exactly one track from the three candidates for this user log.\n"
+                        "Choose exactly one track from the provided playable candidates for this user log.\n"
                         f"Situation: {situation}\n"
                         f"Caption: {caption or '(none)'}\n"
                         f"Photo analysis: {image_context or '(none)'}\n"
@@ -654,6 +654,7 @@ def normalize_track(
         "spotify_url": track.get("href"),
         "duration_ms": track.get("durationMs"),
         "popularity": track.get("popularity") or 0,
+        "available_countries": sorted(country_set),
         "available_in_preferred_country": any(country in country_set for country in PREFERRED_COUNTRIES),
         "audio_features": audio_features or {},
         "fit_reason": fit_reason,
