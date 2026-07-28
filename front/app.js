@@ -310,6 +310,22 @@ async function getSpotifyAccessToken() {
   return data.session?.provider_token || null;
 }
 
+async function getSpotifyTrackRestrictionReason(index, token) {
+  const trackId = trackIdFromSpotifyUrl(currentTrackUris[index] || "");
+  if (!trackId || !token) return null;
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    const track = await response.json();
+    return track?.restrictions?.reason || null;
+  } catch (error) {
+    console.warn("Spotify 트랙 제한 사유 확인 실패:", error);
+    return null;
+  }
+}
+
 async function refreshSpotifyPremiumStatus(token = null) {
   const accessToken = token || await getSpotifyAccessToken();
   if (!accessToken) {
@@ -523,6 +539,18 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
   );
   const isRestrictionViolation =
     lastError.status === 403 && /restriction violated/i.test(lastError.body || "");
+  const restrictionReason = isRestrictionViolation
+    ? await getSpotifyTrackRestrictionReason(currentTrackIndex, token)
+    : null;
+  if (restrictionReason === "explicit") {
+    showPlayerStatus(
+      "연령 제한 콘텐츠예요. Spotify에서 연령 확인을 진행한 후 다시 재생해주세요.",
+      "error",
+      0,
+    );
+    setPlayerPlaying(false);
+    return;
+  }
   if (isRestrictionViolation && attemptedIndexes.size < currentTrackUris.length) {
     let nextIndex = (currentTrackIndex + 1) % currentTrackUris.length;
     while (attemptedIndexes.has(nextIndex)) {
