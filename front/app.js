@@ -2955,9 +2955,8 @@ document.addEventListener("click", (event) => {
     if (playerEntryMode === "home") {
       showScreen(screens.indexOf("record-home-screen"));
     } else {
-      // 앨범 상태(archive-playlist-detail)와 플레이어는 같은 화면(스와이프로 펼친 것)이므로,
-      // 뒤로가기는 둘 다 책장(archive-screen)으로 바로 간다.
-      showScreen(screens.indexOf("archive-screen"));
+      // 아카이빙에서 진입한 플레이어는 직전 앨범 상세 화면으로 돌아간다.
+      showScreen(screens.indexOf("archive-playlist-detail-screen"));
     }
     return;
   }
@@ -2973,9 +2972,9 @@ document.addEventListener("click", (event) => {
       showScreen(screens.indexOf("record-home-screen"));
       return;
     }
-    // 앨범 상세(플레이어와 같은 화면)에서 뒤로가기는 책장(archive-screen)으로.
+    // 앨범 상세에서는 직전 월별 앨범 목록으로 돌아간다.
     if (currentScreen === "archive-playlist-detail-screen") {
-      showScreen(screens.indexOf("archive-screen"));
+      showScreen(screens.indexOf("archive-month-screen"));
       return;
     }
     showScreen(currentIndex - 1);
