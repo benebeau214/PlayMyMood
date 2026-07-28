@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import os
 import tempfile
+from datetime import date as calendar_date
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +56,7 @@ GENRE_LABELS = {
     "ballad": "Korean ballad",
     "hiphop": "Hip-hop",
 }
+RECOMMENDATION_COOLDOWN_DAYS = 30
 
 # 어떤 키가 로드됐는지 확인용(끝 4자리만). 시작 로그에서 .env 키가 맞는지 대조.
 _anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -117,6 +120,32 @@ def _load_music_preferences(user_id: str) -> dict[str, Any]:
         except (TypeError, ValueError):
             pass
     return preferences
+
+
+def _load_recent_recommended_track_ids(user_id: str, playlist_date: str) -> set[str]:
+    target_date = calendar_date.fromisoformat(playlist_date)
+    cooldown_start = target_date - timedelta(days=RECOMMENDATION_COOLDOWN_DAYS - 1)
+    rows = (
+        supabase.table("daily_logs")
+        .select("tracks(recco_track_id)")
+        .eq("user_id", user_id)
+        .gte("log_date", cooldown_start.isoformat())
+        .lte("log_date", target_date.isoformat())
+        .execute()
+        .data
+        or []
+    )
+
+    track_ids: set[str] = set()
+    for row in rows:
+        related_tracks = row.get("tracks") or []
+        if isinstance(related_tracks, dict):
+            related_tracks = [related_tracks]
+        for track in related_tracks:
+            track_id = str(track.get("recco_track_id") or "").strip()
+            if track_id:
+                track_ids.add(track_id)
+    return track_ids
 
 
 def _download_photo(photo_path: str) -> str | None:
@@ -231,6 +260,12 @@ def process_log(request: ProcessLogRequest) -> dict[str, Any]:
 def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
     """그날 로그마다 mood_music_agent로 추천 곡 1개씩 만들어 tracks에 저장(로그 1개=곡 1개)."""
     preferences = _load_music_preferences(request.user_id)
+    recent_track_ids = _load_recent_recommended_track_ids(request.user_id, request.date)
+    print(
+        f"[service] recommendation cooldown: excluding "
+        f"{len(recent_track_ids)} track(s) used in the last "
+        f"{RECOMMENDATION_COOLDOWN_DAYS} days"
+    )
     logs = (
         supabase.table("daily_logs")
         .select("id, caption, situation, image_context, emotion_scores")
@@ -291,7 +326,13 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             )
 
         try:
-            result = recommend_music(situation, emotions, limit=3, preferences=preferences)
+            result = recommend_music(
+                situation,
+                emotions,
+                limit=3,
+                preferences=preferences,
+                excluded_track_ids=recent_track_ids,
+            )
         except Exception as exc:  # 한 로그 실패가 전체를 막지 않도록.
             print(f"[service] recommend 실패 log {log['id']}: {exc}")
             failures.append({
@@ -369,6 +410,10 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             else:
                 supabase.table("tracks").insert(track_payload).execute()
                 created += 1
+            selected_track_id = str(top.get("id") or "").strip()
+            if selected_track_id:
+                # Prevent duplicates between multiple new logs in this same request.
+                recent_track_ids.add(selected_track_id)
         except Exception as exc:
             print(f"[service] track save failed log {log['id']}: {exc}")
             failures.append({
