@@ -10,6 +10,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 
@@ -361,7 +362,7 @@ class AnthropicMoodClient:
                 {
                     "role": "user",
                     "content": (
-                        "Choose exactly one track from the three candidates for this user log.\n"
+                        "Choose exactly one track from the provided playable candidates for this user log.\n"
                         f"Situation: {situation}\n"
                         f"Caption: {caption or '(none)'}\n"
                         f"Photo analysis: {image_context or '(none)'}\n"
@@ -372,6 +373,11 @@ class AnthropicMoodClient:
                         "Selection rules:\n"
                         "- Select the song that best fits the combined photo, caption, situation, and emotions.\n"
                         "- Treat the user's caption and selected emotions as strong evidence.\n"
+                        "- Strong joy, excitement, or satisfaction must favor bright, lively, playful music. "
+                        "Do not choose a low-valence, dark, sensual, or melancholic track unless the diary context "
+                        "clearly contains matching mixed or negative emotion.\n"
+                        "- For food, snack, cafe, and small-celebration moments with positive emotions, favor a "
+                        "light and cheerful everyday mood rather than dramatic or heavy music.\n"
                         "- Use audio features and title/artist metadata only; do not invent facts about a song.\n"
                         "- For study/focus logs, avoid very high danceability, speechiness, or an overly bright mood.\n"
                         "- Balance fatigue: avoid music that is too sleepy unless the log asks for rest.\n"
@@ -492,12 +498,27 @@ class ReccoBeatsClient:
     def get_audio_features(self, track_ids: list[str]) -> dict[str, dict[str, Any]]:
         if not track_ids:
             return {}
-        response = self._get("/v1/audio-features", {"ids": track_ids})
         features: dict[str, dict[str, Any]] = {}
-        for item in _content_list(response):
-            track_id = item.get("id")
-            if isinstance(track_id, str):
-                features[track_id] = item
+
+        def fetch_one(track_id: str) -> tuple[str, dict[str, Any] | None]:
+            try:
+                response = self._get(
+                    f"/v1/track/{urllib.parse.quote(track_id)}/audio-features",
+                    {},
+                )
+            except ReccoBeatsError:
+                return track_id, None
+            return track_id, response if isinstance(response, dict) else None
+
+        with ThreadPoolExecutor(max_workers=min(4, len(track_ids))) as executor:
+            futures = {
+                executor.submit(fetch_one, track_id): track_id
+                for track_id in track_ids
+            }
+            for future in as_completed(futures):
+                track_id, response = future.result()
+                if response:
+                    features[track_id] = response
         return features
 
 
@@ -654,6 +675,7 @@ def normalize_track(
         "spotify_url": track.get("href"),
         "duration_ms": track.get("durationMs"),
         "popularity": track.get("popularity") or 0,
+        "available_countries": sorted(country_set),
         "available_in_preferred_country": any(country in country_set for country in PREFERRED_COUNTRIES),
         "audio_features": audio_features or {},
         "fit_reason": fit_reason,
@@ -814,6 +836,50 @@ def rank_tracks(
         ),
         reverse=True,
     )
+
+
+def filter_tracks_by_emotion_compatibility(
+    tracks: list[dict[str, Any]],
+    emotions: dict[str, float],
+    warnings: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Remove clear audio-feature contradictions for strongly expressed moods."""
+    warnings = warnings if warnings is not None else []
+    joy = max(float(emotions.get("joy") or 0), float(emotions.get("confidence") or 0))
+    excitement = float(emotions.get("excitement") or 0)
+    negative = max(
+        float(emotions.get("sadness") or 0),
+        float(emotions.get("anger") or 0),
+        float(emotions.get("anxiety") or 0),
+        float(emotions.get("loneliness") or 0),
+    )
+    strongly_positive = max(joy, excitement) >= 0.65 and negative < 0.5
+    if not strongly_positive:
+        return tracks
+
+    compatible: list[dict[str, Any]] = []
+    for track in tracks:
+        audio = track.get("audio_features") or {}
+        valence = audio.get("valence")
+        energy = audio.get("energy")
+        missing_positive_mood_evidence = not isinstance(
+            valence,
+            int | float,
+        ) and not isinstance(energy, int | float)
+        low_valence_conflict = isinstance(valence, int | float) and float(valence) < 0.4
+        low_energy_conflict = (
+            excitement >= 0.7
+            and isinstance(energy, int | float)
+            and float(energy) < 0.45
+        )
+        if missing_positive_mood_evidence or low_valence_conflict or low_energy_conflict:
+            warnings.append(
+                f"emotion mismatch excluded '{track.get('title') or track.get('id')}': "
+                f"valence={valence}, energy={energy}"
+            )
+            continue
+        compatible.append(track)
+    return compatible
 
 
 def compact_track_for_selection(track: dict[str, Any]) -> dict[str, Any]:
@@ -1003,6 +1069,16 @@ def recommend_music(
                 f"{len(matching_tracks)}/{limit} matching track(s); retrying"
             )
 
+    matching_tracks = filter_tracks_by_emotion_compatibility(
+        matching_tracks,
+        emotions,
+        warnings,
+    )
+    fallback_tracks = filter_tracks_by_emotion_compatibility(
+        fallback_tracks,
+        emotions,
+        [],
+    )
     ranked_matches = rank_tracks(matching_tracks, target_features, preferences)
     ranked = ranked_matches[:limit]
     if len(ranked) < limit:

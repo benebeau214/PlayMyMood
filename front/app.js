@@ -310,6 +310,22 @@ async function getSpotifyAccessToken() {
   return data.session?.provider_token || null;
 }
 
+async function getSpotifyTrackRestrictionReason(index, token) {
+  const trackId = trackIdFromSpotifyUrl(currentTrackUris[index] || "");
+  if (!trackId || !token) return null;
+  try {
+    const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    const track = await response.json();
+    return track?.restrictions?.reason || null;
+  } catch (error) {
+    console.warn("Spotify 트랙 제한 사유 확인 실패:", error);
+    return null;
+  }
+}
+
 async function refreshSpotifyPremiumStatus(token = null) {
   const accessToken = token || await getSpotifyAccessToken();
   if (!accessToken) {
@@ -465,7 +481,7 @@ async function transferPlaybackToThisDevice(token) {
   return response.ok;
 }
 
-async function playSpotifyTrackAt(index) {
+async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
   if (!spotifyDeviceId) {
     console.warn("재생 불가: Spotify 기기(device_id)가 아직 준비되지 않음 (ready 이벤트 대기 중이거나 Premium 계정이 아닐 수 있음)");
     showPlayerStatus("Spotify 재생 기기가 아직 준비되지 않았어요. 새로고침 버튼을 누른 뒤 다시 시도해주세요.", "error", 0);
@@ -483,6 +499,7 @@ async function playSpotifyTrackAt(index) {
     return;
   }
   currentTrackIndex = ((index % currentTrackUris.length) + currentTrackUris.length) % currentTrackUris.length;
+  attemptedIndexes.add(currentTrackIndex);
   const uris = currentTrackUris.slice(currentTrackIndex);
   console.log("[재생 시도] uris =", uris);
   await transferPlaybackToThisDevice(token);
@@ -515,16 +532,45 @@ async function playSpotifyTrackAt(index) {
   console.error(
     `Spotify 재생 API 실패 (status=${lastError.status}): ${lastError.body}` +
       (lastError.status === 403
-        ? " → scope에 user-modify-playback-state가 없거나 계정이 Premium이 아닐 수 있음"
+        ? " → 현재 곡 또는 재생 기기에 Spotify 제한이 적용됐을 수 있음"
         : lastError.status === 404
           ? " → device_id가 계속 인식되지 않음. 탭을 새로고침해서 SDK를 다시 연결해보세요"
           : ""),
   );
+  const isRestrictionViolation =
+    lastError.status === 403 && /restriction violated/i.test(lastError.body || "");
+  const restrictionReason = isRestrictionViolation
+    ? await getSpotifyTrackRestrictionReason(currentTrackIndex, token)
+    : null;
+  if (restrictionReason === "explicit") {
+    showPlayerStatus(
+      "연령 제한 콘텐츠예요. Spotify에서 연령 확인을 진행한 후 다시 재생해주세요.",
+      "error",
+      0,
+    );
+    setPlayerPlaying(false);
+    return;
+  }
+  if (isRestrictionViolation && attemptedIndexes.size < currentTrackUris.length) {
+    let nextIndex = (currentTrackIndex + 1) % currentTrackUris.length;
+    while (attemptedIndexes.has(nextIndex)) {
+      nextIndex = (nextIndex + 1) % currentTrackUris.length;
+    }
+    showPlayerStatus(
+      "이 곡은 현재 계정에서 재생할 수 없어 다음 곡으로 넘어갈게요.",
+      "error",
+      3000,
+    );
+    setPlayerPlaying(false);
+    return playSpotifyTrackAt(nextIndex, attemptedIndexes);
+  }
   const failureMessage =
     lastError.status === 401
       ? "Spotify 로그인이 만료됐어요. 로그아웃한 뒤 다시 로그인해주세요."
-      : lastError.status === 403
-        ? "재생 권한이 없어요. Premium 계정과 Spotify 권한을 확인해주세요."
+      : isRestrictionViolation
+        ? "이 플레이리스트에서 현재 계정으로 재생 가능한 곡을 찾지 못했어요."
+        : lastError.status === 403
+          ? "Spotify가 이 재생 요청을 허용하지 않았어요. 계정과 기기 상태를 확인해주세요."
         : lastError.status === 404
           ? "Spotify가 이 모바일 기기를 찾지 못했어요. 새로고침 버튼을 누른 뒤 다시 시도해주세요."
           : lastError.status === 429
@@ -590,6 +636,7 @@ async function saveOnboarding() {
   if (!sb) return;
   const { data: sessionData } = await sb.auth.getSession();
   const user = sessionData.session?.user;
+  const spotifyAccessToken = sessionData.session?.provider_token || null;
   if (!user) {
     console.warn("온보딩 저장 건너뜀: 로그인 세션 없음");
     return;
@@ -841,7 +888,11 @@ async function generatePlaylist() {
       await fetch(`${PMM.AGENT_SERVICE_URL}/generate-playlist`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ user_id: user.id, date }),
+        body: JSON.stringify({
+          user_id: user.id,
+          date,
+          spotify_access_token: spotifyAccessToken,
+        }),
       });
     } catch (error) {
       console.warn("플리 생성 서비스 호출 실패:", error);
