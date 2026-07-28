@@ -636,7 +636,6 @@ async function saveOnboarding() {
   if (!sb) return;
   const { data: sessionData } = await sb.auth.getSession();
   const user = sessionData.session?.user;
-  const spotifyAccessToken = sessionData.session?.provider_token || null;
   if (!user) {
     console.warn("온보딩 저장 건너뜀: 로그인 세션 없음");
     return;
@@ -871,6 +870,7 @@ async function generatePlaylist() {
   }
   const { data: sessionData } = await sb.auth.getSession();
   const user = sessionData.session?.user;
+  const spotifyAccessToken = sessionData.session?.provider_token || null;
   if (!user) {
     showScreen(screens.indexOf("playlist-edit-screen"));
     return;
@@ -885,17 +885,29 @@ async function generatePlaylist() {
   // 서비스에 그날 로그별 추천 곡 생성 요청 (완료까지 대기 — mood_music_agent가 로그마다 돎).
   if (PMM.AGENT_SERVICE_URL) {
     try {
-      await fetch(`${PMM.AGENT_SERVICE_URL}/generate-playlist`, {
+      const response = await fetch(`${PMM.AGENT_SERVICE_URL}/generate-playlist`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           user_id: user.id,
           date,
           spotify_access_token: spotifyAccessToken,
+          // 테스트 중에는 이미 추천된 로그를 유지하고 새 로그에 대해서만 추천한다.
+          only_missing: true,
         }),
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result?.detail || `추천 서비스 응답 오류 (${response.status})`);
+      }
+      if (Number(result?.tracks_failed || 0) > 0) {
+        const firstFailure = result.failures?.[0];
+        const reason = firstFailure?.reason ? `\n${firstFailure.reason}` : "";
+        alert(`추천곡을 만들지 못한 기록이 ${result.tracks_failed}개 있어요.${reason}`);
+      }
     } catch (error) {
       console.warn("플리 생성 서비스 호출 실패:", error);
+      alert(`플레이리스트 추천 중 오류가 발생했어요.\n${error?.message || error}`);
     }
   }
 
@@ -2479,7 +2491,11 @@ async function finalizeTodayPlaylist() {
 
 function updateTodayPlaylistButton() {
   if (!playlistButton) return;
-  playlistButton.textContent = hasTodayPlaylist ? "오늘의 플리 들으러 가기" : "플레이리스트 만들기";
+  const hasUnrecommendedLogs = logs.some((log) => log?.id && !log.hasRecommendedTrack);
+  const shouldGenerate = !hasTodayPlaylist || hasUnrecommendedLogs;
+  playlistButton.textContent = shouldGenerate ? "플레이리스트 만들기" : "오늘의 플리 들으러 가기";
+  playlistButton.dataset.mode = shouldGenerate ? "generate" : "listen";
+  playlistButton.disabled = false;
 }
 
 async function loadTodayLogsIntoLocalCache() {
@@ -2488,18 +2504,40 @@ async function loadTodayLogsIntoLocalCache() {
   const userId = await currentUserId();
   if (!userId) return;
   const date = todayKstDate();
-  const { data, error } = await sb
-    .from("daily_logs")
-    .select("id, caption, photo_path, sticker_path, logged_at, log_date")
-    .eq("user_id", userId)
-    .eq("log_date", date)
-    .order("logged_at");
+  const [{ data, error }, { data: playlistRow, error: playlistError }] = await Promise.all([
+    sb
+      .from("daily_logs")
+      .select("id, caption, photo_path, sticker_path, logged_at, log_date, tracks(id, title, recco_track_id, spotify_url)")
+      .eq("user_id", userId)
+      .eq("log_date", date)
+      .order("logged_at"),
+    sb
+      .from("playlists")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("playlist_date", date)
+      .limit(1)
+      .maybeSingle(),
+  ]);
   if (error) {
     console.error("오늘의 기록 로드 실패:", error.message);
     return;
   }
+  if (playlistError) {
+    console.error("오늘의 플레이리스트 확인 실패:", playlistError.message);
+  } else {
+    hasTodayPlaylist = Boolean(playlistRow?.id);
+  }
   logs.length = 0;
   for (const row of data || []) {
+    const relatedTracks = Array.isArray(row.tracks)
+      ? row.tracks
+      : row.tracks
+        ? [row.tracks]
+        : [];
+    const hasRecommendedTrack = relatedTracks.some((track) => (
+      Boolean(track?.title && (track?.recco_track_id || track?.spotify_url))
+    ));
     logs.push({
       id: row.id,
       caption: row.caption,
@@ -2509,6 +2547,7 @@ async function loadTodayLogsIntoLocalCache() {
       logDate: row.log_date || date,
       date: formatDisplayDate(date),
       time: formatDisplayTime(row.logged_at),
+      hasRecommendedTrack,
     });
   }
 }
@@ -2860,7 +2899,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (target.id === "playlist-button") {
-    if (hasTodayPlaylist) {
+    if (target.dataset.mode === "listen") {
       playerEntryMode = "home";
       activePlayerDate = todayKstDate();
       showScreen(screens.indexOf("playlist-player-screen"));
