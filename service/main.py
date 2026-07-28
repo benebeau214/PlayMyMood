@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from supabase import create_client
 
 from agent.mood_intake_agent import EmotionLog, analyze_daily_logs
-from agent.mood_music_agent import recommend_music
+from agent.mood_music_agent import recommend_music, select_best_track
 
 # 스티커 에이전트는 Replicate 토큰이 있을 때만 동작하므로 선택적으로 import.
 try:
@@ -226,7 +226,7 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
     preferences = _load_music_preferences(request.user_id)
     logs = (
         supabase.table("daily_logs")
-        .select("id, caption, situation, emotion_scores")
+        .select("id, caption, situation, image_context, emotion_scores")
         .eq("user_id", request.user_id)
         .eq("log_date", request.date)
         .order("logged_at")
@@ -247,7 +247,7 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         situation = log.get("situation") or log.get("caption") or "오늘의 기록"
         emotions = log.get("emotion_scores") or {}
         try:
-            result = recommend_music(situation, emotions, limit=1, preferences=preferences)
+            result = recommend_music(situation, emotions, limit=3, preferences=preferences)
         except Exception as exc:  # 한 로그 실패가 전체를 막지 않도록.
             print(f"[service] recommend 실패 log {log['id']}: {exc}")
             continue
@@ -255,6 +255,29 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         if not recommendations:
             continue
         top = recommendations[0]
+        try:
+            final_selection = select_best_track(
+                situation,
+                emotions,
+                result,
+                caption=log.get("caption") or "",
+                image_context=log.get("image_context") or "",
+            )
+            top = final_selection["selected_track"]
+            selection_reason = str(
+                (final_selection.get("selection") or {}).get("reason") or ""
+            ).strip()
+            print(
+                f"[service] final selection log {log['id']}: "
+                f"{top.get('id')} from {final_selection.get('candidate_count')} candidates"
+            )
+        except Exception as exc:
+            # A final-selection failure must not prevent playlist creation.
+            selection_reason = ""
+            print(
+                f"[service] final selector failed log {log['id']}; "
+                f"using ranked first candidate: {exc}"
+            )
         supabase.table("tracks").insert(
             {
                 "log_id": log["id"],
@@ -265,7 +288,7 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
                 "duration_ms": top.get("duration_ms"),
                 "popularity": top.get("popularity"),
                 "audio_features": top.get("audio_features"),
-                "fit_reason": top.get("fit_reason"),
+                "fit_reason": selection_reason or top.get("fit_reason"),
             }
         ).execute()
         created += 1
