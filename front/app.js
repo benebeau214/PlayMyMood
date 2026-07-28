@@ -1433,7 +1433,7 @@ async function loadArchiveMonthCounts() {
     .from("playlists")
     .select("playlist_date")
     .eq("user_id", userId)
-    .not("title", "is", null)
+    .eq("status", "ready")
     .gte("playlist_date", `${year}-01-01`)
     .lte("playlist_date", `${year}-12-31`);
   if (error) {
@@ -1592,7 +1592,7 @@ async function renderArchiveMonthView(month = activeArchiveMonth) {
     .from("playlists")
     .select("id, playlist_date, title, description")
     .eq("user_id", userId)
-    .not("title", "is", null)
+    .eq("status", "ready")
     .gte("playlist_date", `${year}-${monthStr}-01`)
     .lte("playlist_date", `${year}-${monthStr}-${String(lastDay).padStart(2, "0")}`)
     .order("playlist_date");
