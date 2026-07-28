@@ -977,11 +977,17 @@ def recommend_music(
     limit: int = 10,
     *,
     preferences: dict[str, Any] | None = None,
+    excluded_track_ids: set[str] | None = None,
     claude_client: Any | None = None,
     recco_client: Any | None = None,
 ) -> dict[str, Any]:
     validate_inputs(situation, emotions, limit)
     preferences = normalize_preferences(preferences or {})
+    excluded_track_ids = {
+        str(track_id)
+        for track_id in (excluded_track_ids or set())
+        if str(track_id)
+    }
     warnings: list[str] = []
     claude = claude_client or AnthropicMoodClient()
     recco = recco_client or ReccoBeatsClient()
@@ -1026,6 +1032,21 @@ def recommend_music(
         if attempt == 0:
             raw_tracks = seed_tracks + raw_tracks
         raw_tracks = dedupe_tracks(raw_tracks)
+        excluded_candidates = [
+            track
+            for track in raw_tracks
+            if str(track.get("id") or "") in excluded_track_ids
+        ]
+        if excluded_candidates:
+            warnings.append(
+                f"recent recommendation cooldown excluded "
+                f"{len(excluded_candidates)} candidate(s)"
+            )
+        raw_tracks = [
+            track
+            for track in raw_tracks
+            if str(track.get("id") or "") not in excluded_track_ids
+        ]
         new_raw_tracks = [
             track
             for track in raw_tracks

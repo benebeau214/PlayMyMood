@@ -213,6 +213,26 @@ class PreferenceRetryTests(unittest.TestCase):
         self.assertEqual(recco.recommendation_calls, 1)
         self.assertEqual(claude.filter_calls, 0)
 
+    def test_excludes_tracks_recommended_during_cooldown(self) -> None:
+        recco = BatchedRecco(
+            [[
+                raw_track("recent-track", "Recently Recommended", "Artist A", popularity=99),
+                raw_track("fresh-track", "Fresh Recommendation", "Artist B", popularity=50),
+            ]]
+        )
+
+        result = recommend_music(
+            "저녁 휴식",
+            {"calm": 0.7},
+            limit=1,
+            excluded_track_ids={"recent-track"},
+            claude_client=ProfileOnlyClaude(),
+            recco_client=recco,
+        )
+
+        self.assertEqual([track["id"] for track in result["recommendations"]], ["fresh-track"])
+        self.assertTrue(any("cooldown excluded" in warning for warning in result["warnings"]))
+
     def test_missing_evaluator_uses_ranked_fallback(self) -> None:
         recco = BatchedRecco([[raw_track("foreign-1", "Foreign Song", "Foreign Artist")]])
 
