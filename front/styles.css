@@ -326,7 +326,7 @@ h1 {
   width: 72px;
   height: 92px;
   transform: translate(-50%, -50%);
-  background: url("./assets/music-note-yellow.png") center / contain no-repeat;
+  background: url("./assets/common/music-note-yellow.png") center / contain no-repeat;
 }
 
 .hit-slider {
@@ -1377,7 +1377,7 @@ h1 {
   height: 142px;
   background:
     linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)),
-    url("./assets/playlist-record.png") center / 93.33% no-repeat;
+    url("./assets/playlist/playlist-record.png") center / 93.33% no-repeat;
   box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18);
 }
 
@@ -2290,7 +2290,7 @@ h1 {
 }
 
 .track-row:nth-of-type(3) .track-thumb {
-  background: url("./assets/archive-photo.png") center / cover no-repeat, #ddd;
+  background: url("./assets/home/archive-photo.png") center / cover no-repeat, #ddd;
 }
 
 .track-row:nth-of-type(4) .track-thumb {
@@ -2681,7 +2681,7 @@ h1 {
 .archive-album-card[aria-current="true"] { z-index: 2; opacity: 1; filter: none; transform: scale(1); }
 .archive-album-date { position: absolute; left: 0; right: 0; top: 0; color: #666; font-size: 1rem; text-align: center; }
 .archive-album-card:not([aria-current="true"]) .archive-album-date { opacity: 0; }
-.archive-album-cover { position: absolute; left: 0; top: 50px; width: 197px; height: 197px; background: linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)), url("./assets/playlist-record.png") center / 93.33% no-repeat; box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18); }
+.archive-album-cover { position: absolute; left: 0; top: 50px; width: 197px; height: 197px; background: linear-gradient(rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)), url("./assets/playlist/playlist-record.png") center / 93.33% no-repeat; box-shadow: 0 4px 7px rgba(0, 0, 0, 0.18); }
 .archive-empty-message { flex: 0 0 100%; margin: 95px 0 0; color: #777; text-align: center; font-size: 1rem; }
 .archive-month-copy { position: absolute; left: 26px; right: 26px; top: 565px; text-align: center; }
 .archive-month-copy h1,
@@ -3954,7 +3954,7 @@ h1 {
 .playlist-player-screen .player-board-base {
   border: 0;
   border-radius: 5px;
-  background: url("./assets/player-board-base.png") center / 100% 100% no-repeat;
+  background: url("./assets/playlist/player-board-base.png") center / 100% 100% no-repeat;
 }
 
 .playlist-player-screen .player-tonearm {
@@ -3962,7 +3962,7 @@ h1 {
   top: 27px;
   width: 116px;
   height: 124px;
-  background: url("./assets/player-tonearm.png") center / contain no-repeat;
+  background: url("./assets/playlist/player-tonearm.png") center / contain no-repeat;
 }
 
 .playlist-player-screen .player-tonearm::before,

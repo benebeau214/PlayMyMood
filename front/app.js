@@ -629,22 +629,22 @@ const EMOTION_VALUES = [
 ];
 
 const EMOTION_NOTE_ASSETS = {
-  "기쁜": "./assets/emotion-joy.png",
-  "신나는": "./assets/emotion-excited.png",
-  "행복한": "./assets/emotion-happy.png",
-  "설레는": "./assets/emotion-flutter.png",
-  "뿌듯한": "./assets/emotion-proud.png",
-  "감동한": "./assets/emotion-touched.png",
-  "편안한": "./assets/emotion-comfortable.png",
-  "짜릿한": "./assets/emotion-relieved.png",
-  "만족한": "./assets/emotion-satisfied.png",
-  "화난": "./assets/emotion-angry.png",
-  "짜증난": "./assets/emotion-annoyed.png",
-  "우울한": "./assets/emotion-depressed.png",
-  "불안한": "./assets/emotion-anxious.png",
-  "괴로운": "./assets/emotion-distressed.png",
-  "피곤한": "./assets/emotion-tired.png",
-  "속상한": "./assets/emotion-hurt.png",
+  "기쁜": "./assets/emotions/emotion-joy.png",
+  "신나는": "./assets/emotions/emotion-excited.png",
+  "행복한": "./assets/emotions/emotion-happy.png",
+  "설레는": "./assets/emotions/emotion-flutter.png",
+  "뿌듯한": "./assets/emotions/emotion-proud.png",
+  "감동한": "./assets/emotions/emotion-touched.png",
+  "편안한": "./assets/emotions/emotion-comfortable.png",
+  "짜릿한": "./assets/emotions/emotion-relieved.png",
+  "만족한": "./assets/emotions/emotion-satisfied.png",
+  "화난": "./assets/emotions/emotion-angry.png",
+  "짜증난": "./assets/emotions/emotion-annoyed.png",
+  "우울한": "./assets/emotions/emotion-depressed.png",
+  "불안한": "./assets/emotions/emotion-anxious.png",
+  "괴로운": "./assets/emotions/emotion-distressed.png",
+  "피곤한": "./assets/emotions/emotion-tired.png",
+  "속상한": "./assets/emotions/emotion-hurt.png",
 };
 
 function emotionNoteSources(emotions = []) {
@@ -1585,7 +1585,7 @@ function buildArchiveDetailCarousel() {
     square.className = "archive-detail-square";
     const record = document.createElement("img");
     record.className = "archive-detail-record";
-    record.src = "./assets/playlist-record.png";
+    record.src = "./assets/playlist/playlist-record.png";
     record.alt = "";
 
     cover.append(square, record);

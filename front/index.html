@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Play My Mood</title>
-    <link rel="icon" type="image/png" href="./assets/music-note-yellow.png" />
+    <link rel="icon" type="image/png" href="./assets/common/music-note-yellow.png" />
     <!-- PWA: 홈 화면에 추가 후 아이콘으로 실행하면 주소창 없이 전체화면 -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#fbf6ea" />
@@ -12,15 +12,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Play My Mood" />
-    <link rel="apple-touch-icon" href="./assets/music-note-yellow.png" />
-    <link rel="stylesheet" href="./styles.css?v=20260728-archive-cover-raised" />
+    <link rel="apple-touch-icon" href="./assets/common/music-note-yellow.png" />
+    <link rel="stylesheet" href="./styles.css?v=20260728-asset-folders" />
   </head>
   <body>
     <main class="app-shell" aria-live="polite">
       <section class="screen active login-screen" id="login-screen" aria-label="Play My Mood 로그인">
-        <img class="brand-logo" src="./assets/play-my-mood-logo.png" alt="Play My Mood" />
+        <img class="brand-logo" src="./assets/splash/play-my-mood-logo.png" alt="Play My Mood" />
         <button class="spotify-button" type="button" data-action="spotify-login" aria-label="Spotify로 로그인하기">
-          <img src="./assets/spotify-login-button.png" alt="" />
+          <img src="./assets/splash/spotify-login-button.png" alt="" />
         </button>
       </section>
 
@@ -35,8 +35,8 @@
           <h1>반가워요!</h1>
           <p>시작하기 전에 음악을 추천하기<br />위해 몇가지 물어볼게요</p>
           <div class="intro-notes" aria-hidden="true">
-            <img class="intro-note yellow-note" src="./assets/music-note-yellow.png" alt="" />
-            <img class="intro-note orange-note" src="./assets/music-note-orange.png" alt="" />
+            <img class="intro-note yellow-note" src="./assets/common/music-note-yellow.png" alt="" />
+            <img class="intro-note orange-note" src="./assets/common/music-note-orange.png" alt="" />
           </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
@@ -72,15 +72,15 @@
           <h1>즐겨듣는 장르를 알려주세요</h1>
           <p class="helper-text">여러 개 골라도 좋아요</p>
           <div class="card-grid genre-grid" role="listbox" aria-label="즐겨듣는 장르" aria-multiselectable="true">
-            <button class="choice-card genre-card genre-kpop selected" type="button" role="option" aria-selected="true"><img src="./assets/kpop-lightstick.png" alt="" />KPOP</button>
-            <button class="choice-card genre-card genre-pop" type="button" role="option"><img src="./assets/pop-mic.png" alt="" />POP</button>
-            <button class="choice-card genre-card genre-ballad" type="button" role="option"><img src="./assets/ballad-piano.png" alt="" />발라드</button>
-            <button class="choice-card genre-card genre-rnb" type="button" role="option"><img src="./assets/rnb-vocal.png" alt="" />R&amp;B</button>
-            <button class="choice-card genre-card genre-jazz" type="button" role="option"><img src="./assets/jazz-sax.png" alt="" />재즈</button>
-            <button class="choice-card genre-card genre-hiphop" type="button" role="option"><img src="./assets/sunglasses.png" alt="" />힙합</button>
-            <button class="choice-card genre-card genre-edm" type="button" role="option"><img src="./assets/edm-dj.png" alt="" />EDM</button>
-            <button class="choice-card genre-card genre-trot" type="button" role="option"><img src="./assets/trot-jacket.png" alt="" />트로트</button>
-            <button class="choice-card genre-card genre-rock" type="button" role="option"><img src="./assets/rock-guitar.png" alt="" />록</button>
+            <button class="choice-card genre-card genre-kpop selected" type="button" role="option" aria-selected="true"><img src="./assets/onboarding/kpop-lightstick.png" alt="" />KPOP</button>
+            <button class="choice-card genre-card genre-pop" type="button" role="option"><img src="./assets/onboarding/pop-mic.png" alt="" />POP</button>
+            <button class="choice-card genre-card genre-ballad" type="button" role="option"><img src="./assets/onboarding/ballad-piano.png" alt="" />발라드</button>
+            <button class="choice-card genre-card genre-rnb" type="button" role="option"><img src="./assets/onboarding/rnb-vocal.png" alt="" />R&amp;B</button>
+            <button class="choice-card genre-card genre-jazz" type="button" role="option"><img src="./assets/onboarding/jazz-sax.png" alt="" />재즈</button>
+            <button class="choice-card genre-card genre-hiphop" type="button" role="option"><img src="./assets/onboarding/sunglasses.png" alt="" />힙합</button>
+            <button class="choice-card genre-card genre-edm" type="button" role="option"><img src="./assets/onboarding/edm-dj.png" alt="" />EDM</button>
+            <button class="choice-card genre-card genre-trot" type="button" role="option"><img src="./assets/onboarding/trot-jacket.png" alt="" />트로트</button>
+            <button class="choice-card genre-card genre-rock" type="button" role="option"><img src="./assets/onboarding/rock-guitar.png" alt="" />록</button>
           </div>
         </div>
         <button class="next-button" type="button" data-action="next">다음</button>
@@ -121,9 +121,9 @@
         </header>
         <p class="welcome-greeting">환영해요!</p>
         <div class="welcome-visual" aria-hidden="true">
-          <img class="welcome-note welcome-note-yellow" src="./assets/music-note-yellow.png" alt="" />
-          <img class="welcome-note welcome-note-orange" src="./assets/music-note-orange.png" alt="" />
-          <img class="welcome-player" src="./assets/record-player-straight.png" alt="" />
+          <img class="welcome-note welcome-note-yellow" src="./assets/common/music-note-yellow.png" alt="" />
+          <img class="welcome-note welcome-note-orange" src="./assets/common/music-note-orange.png" alt="" />
+          <img class="welcome-player" src="./assets/onboarding/record-player-straight.png" alt="" />
         </div>
         <h1><strong>Play My Mood</strong>와<br />오늘 하루를 음악으로<br />마무리 해봐요</h1>
         <button class="next-button welcome-start-button" type="button" data-action="start-onboarding">시작하기</button>
@@ -133,18 +133,18 @@
         <button class="logout-button" type="button" data-action="logout">로그아웃</button>
         <div class="desk-scene" aria-hidden="true">
           <div class="wall-band"></div>
-          <img class="scene-plant" src="./assets/desk-plant.png" alt="" />
+          <img class="scene-plant" src="./assets/home/desk-plant.png" alt="" />
           <!-- 책상 상판: 화분 뒤(위) 레이어라 화분 아랫부분을 덮어 "책상 뒤 화분" 연출.
                카메라/시계/사진/플레이어는 이 뒤에 와서 책상 위에 놓인다. -->
           <div class="desk-table" aria-hidden="true"></div>
           <div class="scene-clock" aria-hidden="true">
-            <img class="clock-face" src="./assets/clock-face.png" alt="" />
-            <img class="clock-hand clock-hand-long" src="./assets/clock-hand-long.png" alt="" />
+            <img class="clock-face" src="./assets/home/clock-face.png" alt="" />
+            <img class="clock-hand clock-hand-long" src="./assets/home/clock-hand-long.png" alt="" />
           </div>
-          <img class="scene-camera" src="./assets/instant-camera.png" alt="" />
-          <img class="scene-photo scene-photo-back" src="./assets/archive-photo.png" alt="" />
-          <img class="scene-photo scene-photo-front" src="./assets/archive-photo-front.png" alt="" />
-          <img class="scene-player" src="./assets/record-player.png" alt="" />
+          <img class="scene-camera" src="./assets/home/instant-camera.png" alt="" />
+          <img class="scene-photo scene-photo-back" src="./assets/home/archive-photo.png" alt="" />
+          <img class="scene-photo scene-photo-front" src="./assets/home/archive-photo-front.png" alt="" />
+          <img class="scene-player" src="./assets/home/record-player.png" alt="" />
         </div>
         <button class="record-button" type="button" data-action="open-records">기록하기</button>
         <button class="archive-pill" type="button" data-action="open-archive">아카이빙</button>
@@ -160,7 +160,7 @@
           </div>
         </header>
         <div class="archive-scroll">
-          <img class="archive-turntable" src="./assets/archive-top-player.png" alt="" aria-hidden="true" />
+          <img class="archive-turntable" src="./assets/archive/archive-top-player.png" alt="" aria-hidden="true" />
           <div class="archive-bookcase" aria-label="월별 플레이리스트 책장">
             <section class="archive-month" data-month="1"><h2>01</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="1" aria-label="1월 플레이리스트 보기"></button></section>
             <section class="archive-month" data-month="2"><h2>02</h2><button type="button" class="archive-shelf empty" data-action="open-archive-month" data-month="2" aria-label="2월 플레이리스트 보기"></button></section>
@@ -216,7 +216,7 @@
         <div class="player-hero" aria-label="플레이리스트 커버">
           <div class="player-record-board" aria-hidden="true">
             <span class="player-board-base"></span>
-            <img class="player-record-disc" src="./assets/camera-shutter-record.png" alt="" />
+            <img class="player-record-disc" src="./assets/camera/camera-shutter-record.png" alt="" />
             <span class="player-tonearm"></span>
           </div>
           <article class="player-log-polaroid" aria-label="대표 기록">
@@ -279,9 +279,9 @@
         </div>
         <button class="camera-tool-button flash-button" type="button" data-action="toggle-flash" aria-label="플래시 켜기"><span></span></button>
         <button class="shutter-button" type="button" data-action="capture-photo" aria-label="사진 촬영">
-          <img src="./assets/camera-shutter-record.png" alt="" />
+          <img src="./assets/camera/camera-shutter-record.png" alt="" />
         </button>
-        <button class="camera-tool-button switch-camera-button" type="button" data-action="switch-camera" aria-label="카메라 전환"><img src="./assets/camera-switch-icon.png" alt="" /></button>
+        <button class="camera-tool-button switch-camera-button" type="button" data-action="switch-camera" aria-label="카메라 전환"><img src="./assets/camera/camera-switch-icon.png" alt="" /></button>
       </section>
 
       <section class="screen note-screen" id="note-screen" aria-label="기록 문장 입력">
@@ -324,28 +324,28 @@
         <section class="emotion-panel" aria-label="감정 고르기">
           <h1>지금의 감정은 어떠신가요?</h1>
           <div class="emotion-choice-grid" role="listbox" aria-multiselectable="true" aria-label="감정 선택">
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="기쁜"><img src="./assets/emotion-joy.png" alt="" /><span>기쁨</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="신나는"><img src="./assets/emotion-excited.png" alt="" /><span>신남</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="행복한"><img src="./assets/emotion-happy.png" alt="" /><span>행복</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="설레는"><img src="./assets/emotion-flutter.png" alt="" /><span>설렘</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="뿌듯한"><img src="./assets/emotion-proud.png" alt="" /><span>뿌듯함</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="감동한"><img src="./assets/emotion-touched.png" alt="" /><span>감동</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="편안한"><img src="./assets/emotion-comfortable.png" alt="" /><span>평온</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜릿한"><img src="./assets/emotion-relieved.png" alt="" /><span>짜릿</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="만족한"><img src="./assets/emotion-satisfied.png" alt="" /><span>만족</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="화난"><img src="./assets/emotion-angry.png" alt="" /><span>화남</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜증난"><img src="./assets/emotion-annoyed.png" alt="" /><span>짜증</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="우울한"><img src="./assets/emotion-depressed.png" alt="" /><span>우울</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="불안한"><img src="./assets/emotion-anxious.png" alt="" /><span>불안</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="괴로운"><img src="./assets/emotion-distressed.png" alt="" /><span>괴로움</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="피곤한"><img src="./assets/emotion-tired.png" alt="" /><span>피곤</span></button>
-            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="속상한"><img src="./assets/emotion-hurt.png" alt="" /><span>속상</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="기쁜"><img src="./assets/emotions/emotion-joy.png" alt="" /><span>기쁨</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="신나는"><img src="./assets/emotions/emotion-excited.png" alt="" /><span>신남</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="행복한"><img src="./assets/emotions/emotion-happy.png" alt="" /><span>행복</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="설레는"><img src="./assets/emotions/emotion-flutter.png" alt="" /><span>설렘</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="뿌듯한"><img src="./assets/emotions/emotion-proud.png" alt="" /><span>뿌듯함</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="감동한"><img src="./assets/emotions/emotion-touched.png" alt="" /><span>감동</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="편안한"><img src="./assets/emotions/emotion-comfortable.png" alt="" /><span>평온</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜릿한"><img src="./assets/emotions/emotion-relieved.png" alt="" /><span>짜릿</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="만족한"><img src="./assets/emotions/emotion-satisfied.png" alt="" /><span>만족</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="화난"><img src="./assets/emotions/emotion-angry.png" alt="" /><span>화남</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="짜증난"><img src="./assets/emotions/emotion-annoyed.png" alt="" /><span>짜증</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="우울한"><img src="./assets/emotions/emotion-depressed.png" alt="" /><span>우울</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="불안한"><img src="./assets/emotions/emotion-anxious.png" alt="" /><span>불안</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="괴로운"><img src="./assets/emotions/emotion-distressed.png" alt="" /><span>괴로움</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="피곤한"><img src="./assets/emotions/emotion-tired.png" alt="" /><span>피곤</span></button>
+            <button class="emotion-choice" type="button" role="option" aria-selected="false" data-emotion="속상한"><img src="./assets/emotions/emotion-hurt.png" alt="" /><span>속상</span></button>
           </div>
         </section>
       </section>
       <section class="screen record-complete-screen" id="record-complete-screen" aria-label="기록 완료">
         <div class="complete-message">
-          <img class="complete-note" src="./assets/music-note-yellow.png" alt="" />
+          <img class="complete-note" src="./assets/common/music-note-yellow.png" alt="" />
           <h1>기록 완료!</h1>
           <p>또 만나요</p>
         </div>
@@ -364,7 +364,7 @@
           <input id="playlist-title" class="playlist-title-input" type="text" placeholder="플레이리스트의 제목을 붙여주세요" />
           <div class="playlist-cover-preview" aria-label="앨범 커버 미리보기">
             <div class="cover-square"></div>
-            <img class="cover-disc" src="./assets/playlist-record.png" alt="" />
+            <img class="cover-disc" src="./assets/playlist/playlist-record.png" alt="" />
           </div>
           <p class="playlist-date"></p>
           <p class="intro-label">한 줄 소개</p>
@@ -407,7 +407,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <script src="./config.js?v=20260727-local-backend"></script>
-    <script src="./app.js?v=20260728-archive-horizontal-lock"></script>
+    <script src="./app.js?v=20260728-asset-folders"></script>
   </body>
 </html>
 
