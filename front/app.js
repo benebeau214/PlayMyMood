@@ -291,12 +291,16 @@ function showPlayerStatus(message, type = "info", timeout = 7000) {
     : null;
 }
 
-function activateSpotifyForMobileGesture() {
-  if (!spotifyPlayer?.activateElement) return;
-  spotifyPlayer.activateElement().catch((error) => {
+async function activateSpotifyForMobileGesture() {
+  if (!spotifyPlayer?.activateElement) return false;
+  try {
+    await spotifyPlayer.activateElement();
+    return true;
+  } catch (error) {
     console.warn("Spotify 모바일 미디어 활성화 실패:", error);
     showPlayerStatus("모바일 재생 권한을 활성화하지 못했어요. 재생 버튼을 다시 눌러주세요.", "error");
-  });
+    return false;
+  }
 }
 
 function trackIdFromSpotifyUrl(url) {
@@ -481,6 +485,32 @@ async function transferPlaybackToThisDevice(token) {
   return response.ok;
 }
 
+async function ensureSpotifyLocalPlayback(index) {
+  if (!spotifyPlayer) return false;
+  const expectedUri = currentTrackUris[index];
+  const delays = [200, 400, 700, 1000];
+  let resumeAttempted = false;
+
+  for (const delay of delays) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    const state = await spotifyPlayer.getCurrentState().catch(() => null);
+    const currentUri = state?.track_window?.current_track?.uri;
+    if (state && currentUri === expectedUri && !state.paused) return true;
+
+    // iOS/Safari에서는 Web API의 재생 명령이 성공해도 로컬 SDK가
+    // autoplay 차단으로 paused 상태에 남을 수 있다.
+    if (state && currentUri === expectedUri && state.paused && !resumeAttempted) {
+      resumeAttempted = true;
+      try {
+        await spotifyPlayer.resume();
+      } catch (error) {
+        console.warn("Spotify 로컬 재생 재개 실패:", error);
+      }
+    }
+  }
+  return false;
+}
+
 async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
   if (!spotifyDeviceId) {
     console.warn("재생 불가: Spotify 기기(device_id)가 아직 준비되지 않음 (ready 이벤트 대기 중이거나 Premium 계정이 아닐 수 있음)");
@@ -502,7 +532,16 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
   attemptedIndexes.add(currentTrackIndex);
   const uris = currentTrackUris.slice(currentTrackIndex);
   console.log("[재생 시도] uris =", uris);
-  await transferPlaybackToThisDevice(token);
+  const transferred = await transferPlaybackToThisDevice(token);
+  if (!transferred) {
+    showPlayerStatus(
+      "Spotify 재생 기기를 활성화하지 못했어요. Spotify 권한을 확인하거나 다시 로그인해주세요.",
+      "error",
+      0,
+    );
+    setPlayerPlaying(false);
+    return false;
+  }
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   // ready 직후엔 Spotify 서버가 아직 이 device_id를 재생 가능 기기로 인식하기 전이라
@@ -522,8 +561,19 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
     });
     if (response.ok) {
       console.log("[재생 성공]");
+      const locallyPlaying = await ensureSpotifyLocalPlayback(currentTrackIndex);
+      if (!locallyPlaying) {
+        console.warn("Spotify API는 성공했지만 모바일 SDK가 재생 상태가 되지 않음");
+        showPlayerStatus(
+          "Spotify는 연결됐지만 모바일 오디오가 시작되지 않았어요. 재생 버튼을 한 번 더 눌러주세요.",
+          "error",
+          0,
+        );
+        setPlayerPlaying(false);
+        return false;
+      }
       showPlayerStatus("재생을 시작했어요.", "info", 2500);
-      return;
+      return true;
     }
     const body = await response.text().catch(() => "");
     lastError = { status: response.status, body };
@@ -549,7 +599,7 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
       0,
     );
     setPlayerPlaying(false);
-    return;
+    return false;
   }
   if (isRestrictionViolation && attemptedIndexes.size < currentTrackUris.length) {
     let nextIndex = (currentTrackIndex + 1) % currentTrackUris.length;
@@ -578,10 +628,12 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
             : `Spotify 재생 요청에 실패했어요. (${lastError.status})`;
   showPlayerStatus(failureMessage, "error", 0);
   setPlayerPlaying(false);
+  return false;
 }
 
-async function startSpotifyPlaybackAt(index = 0) {
+async function startSpotifyPlaybackAt(index = 0, activationPromise = null) {
   if (!currentTrackUris.length) return;
+  if (activationPromise) await activationPromise;
   const normalizedIndex = Math.max(0, Math.min(index, currentTrackUris.length - 1));
   if (spotifyIsPremium === null) await refreshSpotifyPremiumStatus();
   if (spotifyIsPremium === false) {
@@ -596,14 +648,16 @@ async function startSpotifyPlaybackAt(index = 0) {
     return;
   }
   pendingPlaybackIndex = null;
-  spotifyPlaybackStarted = true;
   setPlayerPlaying(true);
-  playSpotifyTrackAt(normalizedIndex).catch((error) => {
+  try {
+    spotifyPlaybackStarted = await playSpotifyTrackAt(normalizedIndex);
+    if (!spotifyPlaybackStarted) setPlayerPlaying(false);
+  } catch (error) {
     console.error("Spotify 재생 처리 실패:", error);
     showPlayerStatus(`Spotify 재생 처리 중 오류가 발생했어요: ${error.message || error}`, "error", 0);
     spotifyPlaybackStarted = false;
     setPlayerPlaying(false);
-  });
+  }
 }
 
 // --- 온보딩 값 수집 → Supabase 저장 ---
@@ -2910,14 +2964,15 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "toggle-player-play") {
-    activateSpotifyForMobileGesture();
+    // activateElement()는 반드시 이 사용자 클릭 경로에서 바로 시작해야 한다.
+    const activationPromise = activateSpotifyForMobileGesture();
     console.log(
       `[재생버튼] spotifyDeviceId=${spotifyDeviceId} currentTrackUris.length=${currentTrackUris.length} spotifyPlaybackStarted=${spotifyPlaybackStarted} isPlayerPlaying=${isPlayerPlaying}`,
     );
     if (currentTrackUris.length) {
       if (!spotifyPlaybackStarted) {
         // 하단 버튼의 첫 재생은 항상 전체 목록의 첫 곡부터 시작한다.
-        startSpotifyPlaybackAt(0);
+        startSpotifyPlaybackAt(0, activationPromise);
       } else if (spotifyPlayer) {
         setPlayerPlaying(!isPlayerPlaying);
         spotifyPlayer?.togglePlay().catch((err) => {
@@ -2955,9 +3010,8 @@ document.addEventListener("click", (event) => {
     if (playerEntryMode === "home") {
       showScreen(screens.indexOf("record-home-screen"));
     } else {
-      // 앨범 상태(archive-playlist-detail)와 플레이어는 같은 화면(스와이프로 펼친 것)이므로,
-      // 뒤로가기는 둘 다 책장(archive-screen)으로 바로 간다.
-      showScreen(screens.indexOf("archive-screen"));
+      // 아카이빙에서 진입한 플레이어는 직전 앨범 상세 화면으로 돌아간다.
+      showScreen(screens.indexOf("archive-playlist-detail-screen"));
     }
     return;
   }
@@ -2973,9 +3027,9 @@ document.addEventListener("click", (event) => {
       showScreen(screens.indexOf("record-home-screen"));
       return;
     }
-    // 앨범 상세(플레이어와 같은 화면)에서 뒤로가기는 책장(archive-screen)으로.
+    // 앨범 상세에서는 직전 월별 앨범 목록으로 돌아간다.
     if (currentScreen === "archive-playlist-detail-screen") {
-      showScreen(screens.indexOf("archive-screen"));
+      showScreen(screens.indexOf("archive-month-screen"));
       return;
     }
     showScreen(currentIndex - 1);
