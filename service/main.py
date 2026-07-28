@@ -28,6 +28,7 @@ from agent.mood_music_agent import (
     filter_tracks_by_emotion_compatibility,
     recommend_music,
     select_best_track,
+    track_identity_keys,
 )
 from agent.spotify_track_validator import filter_playable_spotify_tracks
 
@@ -125,9 +126,9 @@ def _load_music_preferences(user_id: str) -> dict[str, Any]:
 def _load_recent_recommended_track_ids(user_id: str, playlist_date: str) -> set[str]:
     target_date = calendar_date.fromisoformat(playlist_date)
     cooldown_start = target_date - timedelta(days=RECOMMENDATION_COOLDOWN_DAYS - 1)
-    rows = (
+    log_rows = (
         supabase.table("daily_logs")
-        .select("tracks(recco_track_id)")
+        .select("id")
         .eq("user_id", user_id)
         .gte("log_date", cooldown_start.isoformat())
         .lte("log_date", target_date.isoformat())
@@ -135,17 +136,22 @@ def _load_recent_recommended_track_ids(user_id: str, playlist_date: str) -> set[
         .data
         or []
     )
+    log_ids = [str(row.get("id") or "") for row in log_rows if row.get("id")]
+    if not log_ids:
+        return set()
 
-    track_ids: set[str] = set()
-    for row in rows:
-        related_tracks = row.get("tracks") or []
-        if isinstance(related_tracks, dict):
-            related_tracks = [related_tracks]
-        for track in related_tracks:
-            track_id = str(track.get("recco_track_id") or "").strip()
-            if track_id:
-                track_ids.add(track_id)
-    return track_ids
+    track_rows = (
+        supabase.table("tracks")
+        .select("recco_track_id, spotify_url, title, artists")
+        .in_("log_id", log_ids)
+        .execute()
+        .data
+        or []
+    )
+    identities: set[str] = set()
+    for track in track_rows:
+        identities.update(track_identity_keys(track))
+    return identities
 
 
 def _download_photo(photo_path: str) -> str | None:
@@ -410,10 +416,10 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             else:
                 supabase.table("tracks").insert(track_payload).execute()
                 created += 1
-            selected_track_id = str(top.get("id") or "").strip()
-            if selected_track_id:
-                # Prevent duplicates between multiple new logs in this same request.
-                recent_track_ids.add(selected_track_id)
+            # Prevent duplicates between multiple new logs in this same request,
+            # including cases where ReccoBeats returns another ID for the same
+            # Spotify recording.
+            recent_track_ids.update(track_identity_keys(top))
         except Exception as exc:
             print(f"[service] track save failed log {log['id']}: {exc}")
             failures.append({

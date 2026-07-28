@@ -7,6 +7,7 @@ from agent.mood_music_agent import (
     ReccoBeatsClient,
     filter_tracks_by_emotion_compatibility,
     recommend_music,
+    track_identity_keys,
 )
 
 
@@ -232,6 +233,29 @@ class PreferenceRetryTests(unittest.TestCase):
 
         self.assertEqual([track["id"] for track in result["recommendations"]], ["fresh-track"])
         self.assertTrue(any("cooldown excluded" in warning for warning in result["warnings"]))
+
+    def test_excludes_same_spotify_track_even_when_recco_id_changes(self) -> None:
+        duplicate = raw_track("new-recco-id", "Same Song", "Same Artist", popularity=99)
+        duplicate["href"] = "https://open.spotify.com/track/1234567890ABCDEFGHIJKL"
+        fresh = raw_track("fresh-track", "Fresh Recommendation", "Artist B", popularity=50)
+        excluded = track_identity_keys({
+            "recco_track_id": "old-recco-id",
+            "spotify_url": "https://open.spotify.com/track/1234567890ABCDEFGHIJKL",
+            "title": "Same Song",
+            "artists": ["Same Artist"],
+        })
+        recco = BatchedRecco([[duplicate, fresh]])
+
+        result = recommend_music(
+            "산책",
+            {"calm": 0.7},
+            limit=1,
+            excluded_track_ids=excluded,
+            claude_client=ProfileOnlyClaude(),
+            recco_client=recco,
+        )
+
+        self.assertEqual([track["id"] for track in result["recommendations"]], ["fresh-track"])
 
     def test_missing_evaluator_uses_ranked_fallback(self) -> None:
         recco = BatchedRecco([[raw_track("foreign-1", "Foreign Song", "Foreign Artist")]])
