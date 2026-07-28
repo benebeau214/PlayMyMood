@@ -682,6 +682,43 @@ def normalize_track(
     }
 
 
+def track_identity_keys(track: dict[str, Any]) -> set[str]:
+    """Return stable identities for a track across ReccoBeats and Spotify data."""
+    keys: set[str] = set()
+    track_id = str(track.get("id") or track.get("recco_track_id") or "").strip()
+    if track_id:
+        keys.add(track_id)
+        keys.add(f"id:{track_id.casefold()}")
+
+    spotify_track_id = str(track.get("spotify_track_id") or "").strip()
+    spotify_url = str(track.get("spotify_url") or track.get("href") or "").strip()
+    spotify_match = re.search(r"(?:track/|spotify:track:)([A-Za-z0-9]{10,})", spotify_url)
+    if spotify_match:
+        spotify_track_id = spotify_match.group(1)
+    if spotify_track_id:
+        keys.add(f"spotify:{spotify_track_id.casefold()}")
+
+    title = str(track.get("title") or track.get("trackTitle") or "").strip()
+    raw_artists = track.get("artists") or []
+    if isinstance(raw_artists, str):
+        artist_names = [raw_artists]
+    else:
+        artist_names = [
+            str(artist.get("name") if isinstance(artist, dict) else artist).strip()
+            for artist in raw_artists
+        ]
+    artist_names = [name for name in artist_names if name]
+    if title and artist_names:
+        normalized_title = re.sub(r"\W+", "", title, flags=re.UNICODE).casefold()
+        normalized_artists = "|".join(
+            re.sub(r"\W+", "", name, flags=re.UNICODE).casefold()
+            for name in artist_names
+        )
+        if normalized_title and normalized_artists:
+            keys.add(f"metadata:{normalized_title}:{normalized_artists}")
+    return keys
+
+
 def _build_fit_reason(track: dict[str, Any], profile: dict[str, Any]) -> str:
     mood = profile.get("mood_label") or "your mood"
     intent = profile.get("listening_intent") or "the moment"
@@ -984,9 +1021,9 @@ def recommend_music(
     validate_inputs(situation, emotions, limit)
     preferences = normalize_preferences(preferences or {})
     excluded_track_ids = {
-        str(track_id)
+        str(track_id).strip()
         for track_id in (excluded_track_ids or set())
-        if str(track_id)
+        if str(track_id).strip()
     }
     warnings: list[str] = []
     claude = claude_client or AnthropicMoodClient()
@@ -1035,7 +1072,7 @@ def recommend_music(
         excluded_candidates = [
             track
             for track in raw_tracks
-            if str(track.get("id") or "") in excluded_track_ids
+            if track_identity_keys(track) & excluded_track_ids
         ]
         if excluded_candidates:
             warnings.append(
@@ -1045,7 +1082,7 @@ def recommend_music(
         raw_tracks = [
             track
             for track in raw_tracks
-            if str(track.get("id") or "") not in excluded_track_ids
+            if not (track_identity_keys(track) & excluded_track_ids)
         ]
         new_raw_tracks = [
             track
