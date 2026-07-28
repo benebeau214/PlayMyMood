@@ -862,22 +862,23 @@ def filter_tracks_by_emotion_compatibility(
         audio = track.get("audio_features") or {}
         valence = audio.get("valence")
         energy = audio.get("energy")
-        missing_positive_mood_evidence = not isinstance(
-            valence,
-            int | float,
-        ) and not isinstance(energy, int | float)
         low_valence_conflict = isinstance(valence, int | float) and float(valence) < 0.4
         low_energy_conflict = (
             excitement >= 0.7
             and isinstance(energy, int | float)
             and float(energy) < 0.45
         )
-        if missing_positive_mood_evidence or low_valence_conflict or low_energy_conflict:
+        if low_valence_conflict or low_energy_conflict:
             warnings.append(
                 f"emotion mismatch excluded '{track.get('title') or track.get('id')}': "
                 f"valence={valence}, energy={energy}"
             )
             continue
+        if not isinstance(valence, int | float) and not isinstance(energy, int | float):
+            warnings.append(
+                f"emotion compatibility could not be verified for "
+                f"'{track.get('title') or track.get('id')}': audio features unavailable"
+            )
         compatible.append(track)
     return compatible
 

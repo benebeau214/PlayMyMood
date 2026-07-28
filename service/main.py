@@ -86,6 +86,7 @@ class GeneratePlaylistRequest(BaseModel):
     user_id: str
     date: str  # log_date, "YYYY-MM-DD"
     spotify_access_token: str | None = None
+    only_missing: bool = False
 
 
 def _load_music_preferences(user_id: str) -> dict[str, Any]:
@@ -244,6 +245,7 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
     created = 0
     replaced = 0
     skipped = 0
+    failures: list[dict[str, str]] = []
     for log in logs:
         situation = log.get("situation") or log.get("caption") or "오늘의 기록"
         emotions = log.get("emotion_scores") or {}
@@ -259,6 +261,14 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             or []
         )
         existing = existing_rows[0] if existing_rows else None
+        existing_has_recommendation = bool(
+            existing
+            and existing.get("title")
+            and (existing.get("recco_track_id") or existing.get("spotify_url"))
+        )
+        if existing_has_recommendation and request.only_missing:
+            skipped += 1
+            continue
         if existing:
             current_candidate = {
                 **existing,
@@ -284,9 +294,19 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             result = recommend_music(situation, emotions, limit=3, preferences=preferences)
         except Exception as exc:  # 한 로그 실패가 전체를 막지 않도록.
             print(f"[service] recommend 실패 log {log['id']}: {exc}")
+            failures.append({
+                "log_id": str(log["id"]),
+                "stage": "recommend",
+                "reason": str(exc),
+            })
             continue
         recommendations = result.get("recommendations") or []
         if not recommendations:
+            failures.append({
+                "log_id": str(log["id"]),
+                "stage": "candidates",
+                "reason": "추천 후보가 생성되지 않았습니다.",
+            })
             continue
         recommendations, playability = filter_playable_spotify_tracks(
             recommendations,
@@ -295,6 +315,11 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         print(f"[service] Spotify playability log {log['id']}: {playability}")
         if not recommendations:
             print(f"[service] no playable Spotify candidates for log {log['id']}")
+            failures.append({
+                "log_id": str(log["id"]),
+                "stage": "spotify_validation",
+                "reason": "Spotify에서 사용할 수 있는 추천 후보가 없습니다.",
+            })
             continue
         result = {**result, "recommendations": recommendations}
         top = recommendations[0]
@@ -332,17 +357,25 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
             "audio_features": top.get("audio_features"),
             "fit_reason": selection_reason or top.get("fit_reason"),
         }
-        if existing:
-            (
-                supabase.table("tracks")
-                .update(track_payload)
-                .eq("id", existing["id"])
-                .execute()
-            )
-            replaced += 1
-        else:
-            supabase.table("tracks").insert(track_payload).execute()
-            created += 1
+        try:
+            if existing:
+                (
+                    supabase.table("tracks")
+                    .update(track_payload)
+                    .eq("id", existing["id"])
+                    .execute()
+                )
+                replaced += 1
+            else:
+                supabase.table("tracks").insert(track_payload).execute()
+                created += 1
+        except Exception as exc:
+            print(f"[service] track save failed log {log['id']}: {exc}")
+            failures.append({
+                "log_id": str(log["id"]),
+                "stage": "save",
+                "reason": str(exc),
+            })
 
     print(
         f"[service] generate-playlist {request.date}: created={created}, "
@@ -353,6 +386,8 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
         "tracks_created": created,
         "tracks_replaced": replaced,
         "tracks_skipped": skipped,
+        "tracks_failed": len(failures),
+        "failures": failures,
         "logs": len(logs),
     }
 

@@ -292,9 +292,9 @@ class AudioFeatureAndMoodCompatibilityTests(unittest.TestCase):
             warnings,
         )
 
-        self.assertEqual([track["id"] for track in filtered], ["cheerful"])
+        self.assertEqual([track["id"] for track in filtered], ["cheerful", "unknown"])
         self.assertTrue(any("Wicked Games" in warning for warning in warnings))
-        self.assertTrue(any("Popular but unanalyzed song" in warning for warning in warnings))
+        self.assertTrue(any("audio features unavailable" in warning for warning in warnings))
 
     def test_mixed_negative_emotion_does_not_force_bright_music(self) -> None:
         low_valence_track = {
