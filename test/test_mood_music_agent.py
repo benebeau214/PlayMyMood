@@ -3,7 +3,11 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from agent.mood_music_agent import recommend_music
+from agent.mood_music_agent import (
+    ReccoBeatsClient,
+    filter_tracks_by_emotion_compatibility,
+    recommend_music,
+)
 
 
 def raw_track(track_id: str, title: str, artist: str, popularity: int = 50) -> dict[str, Any]:
@@ -224,6 +228,87 @@ class PreferenceRetryTests(unittest.TestCase):
         self.assertEqual([track["id"] for track in result["recommendations"]], ["foreign-1"])
         self.assertEqual(recco.recommendation_calls, 1)
         self.assertTrue(any("AI preference filter unavailable" in warning for warning in result["warnings"]))
+
+
+class AudioFeatureAndMoodCompatibilityTests(unittest.TestCase):
+    def test_reccobeats_uses_current_per_track_audio_feature_endpoint(self) -> None:
+        client = ReccoBeatsClient(base_url="https://example.test")
+        requested_paths: list[str] = []
+
+        def fake_get(path: str, params: dict[str, Any]) -> dict[str, Any]:
+            requested_paths.append(path)
+            track_id = path.split("/")[3]
+            return {"id": track_id, "valence": 0.8, "energy": 0.7}
+
+        client._get = fake_get  # type: ignore[method-assign]
+        features = client.get_audio_features(["track-1", "track-2"])
+
+        self.assertEqual(set(features), {"track-1", "track-2"})
+        self.assertEqual(
+            set(requested_paths),
+            {
+                "/v1/track/track-1/audio-features",
+                "/v1/track/track-2/audio-features",
+            },
+        )
+
+    def test_excited_satisfied_snack_excludes_low_valence_track(self) -> None:
+        wicked_games = {
+            "id": "wicked-games",
+            "title": "Wicked Games",
+            "audio_features": {
+                "valence": 0.258,
+                "energy": 0.57,
+                "danceability": 0.606,
+                "tempo": 114.033,
+            },
+        }
+        cheerful_track = {
+            "id": "cheerful",
+            "title": "Cheerful snack song",
+            "audio_features": {
+                "valence": 0.82,
+                "energy": 0.76,
+                "danceability": 0.74,
+                "tempo": 128,
+            },
+        }
+        unknown_mood_track = {
+            "id": "unknown",
+            "title": "Popular but unanalyzed song",
+            "popularity": 99,
+            "audio_features": {},
+        }
+        warnings: list[str] = []
+
+        filtered = filter_tracks_by_emotion_compatibility(
+            [wicked_games, cheerful_track, unknown_mood_track],
+            {
+                "joy": 0.75,
+                "excitement": 0.9,
+                "calm": 0.55,
+                "confidence": 0.65,
+            },
+            warnings,
+        )
+
+        self.assertEqual([track["id"] for track in filtered], ["cheerful"])
+        self.assertTrue(any("Wicked Games" in warning for warning in warnings))
+        self.assertTrue(any("Popular but unanalyzed song" in warning for warning in warnings))
+
+    def test_mixed_negative_emotion_does_not_force_bright_music(self) -> None:
+        low_valence_track = {
+            "id": "bittersweet",
+            "title": "Bittersweet",
+            "audio_features": {"valence": 0.3, "energy": 0.5},
+        }
+
+        filtered = filter_tracks_by_emotion_compatibility(
+            [low_valence_track],
+            {"joy": 0.7, "sadness": 0.65},
+        )
+
+        self.assertEqual(filtered, [low_valence_track])
 
 
 if __name__ == "__main__":

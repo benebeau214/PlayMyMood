@@ -22,7 +22,11 @@ from pydantic import BaseModel
 from supabase import create_client
 
 from agent.mood_intake_agent import EmotionLog, analyze_daily_logs
-from agent.mood_music_agent import recommend_music, select_best_track
+from agent.mood_music_agent import (
+    filter_tracks_by_emotion_compatibility,
+    recommend_music,
+    select_best_track,
+)
 from agent.spotify_track_validator import filter_playable_spotify_tracks
 
 # 스티커 에이전트는 Replicate 토큰이 있을 때만 동작하므로 선택적으로 import.
@@ -238,16 +242,44 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
     )
 
     created = 0
+    replaced = 0
     skipped = 0
     for log in logs:
-        # 이미 이 로그에 곡이 있으면 건너뜀(tracks.log_id UNIQUE).
-        existing = supabase.table("tracks").select("id").eq("log_id", log["id"]).execute().data
-        if existing:
-            skipped += 1
-            continue
-
         situation = log.get("situation") or log.get("caption") or "오늘의 기록"
         emotions = log.get("emotion_scores") or {}
+        existing_rows = (
+            supabase.table("tracks")
+            .select(
+                "id, recco_track_id, title, artists, spotify_url, duration_ms, "
+                "popularity, audio_features, fit_reason"
+            )
+            .eq("log_id", log["id"])
+            .execute()
+            .data
+            or []
+        )
+        existing = existing_rows[0] if existing_rows else None
+        if existing:
+            current_candidate = {
+                **existing,
+                "id": existing.get("recco_track_id") or existing.get("id"),
+            }
+            playable_existing, _ = filter_playable_spotify_tracks(
+                [current_candidate],
+                request.spotify_access_token,
+            )
+            compatible_existing = filter_tracks_by_emotion_compatibility(
+                playable_existing,
+                emotions,
+            )
+            if compatible_existing:
+                skipped += 1
+                continue
+            print(
+                f"[service] replacing stale or mood-incompatible track "
+                f"for log {log['id']}: {existing.get('title')}"
+            )
+
         try:
             result = recommend_music(situation, emotions, limit=3, preferences=preferences)
         except Exception as exc:  # 한 로그 실패가 전체를 막지 않도록.
@@ -289,21 +321,38 @@ def generate_playlist(request: GeneratePlaylistRequest) -> dict[str, Any]:
                 f"[service] final selector failed log {log['id']}; "
                 f"using ranked first candidate: {exc}"
             )
-        supabase.table("tracks").insert(
-            {
-                "log_id": log["id"],
-                "recco_track_id": top.get("id"),
-                "title": top.get("title"),
-                "artists": top.get("artists"),
-                "spotify_url": top.get("spotify_url"),
-                "duration_ms": top.get("duration_ms"),
-                "popularity": top.get("popularity"),
-                "audio_features": top.get("audio_features"),
-                "fit_reason": selection_reason or top.get("fit_reason"),
-            }
-        ).execute()
-        created += 1
+        track_payload = {
+            "log_id": log["id"],
+            "recco_track_id": top.get("id"),
+            "title": top.get("title"),
+            "artists": top.get("artists"),
+            "spotify_url": top.get("spotify_url"),
+            "duration_ms": top.get("duration_ms"),
+            "popularity": top.get("popularity"),
+            "audio_features": top.get("audio_features"),
+            "fit_reason": selection_reason or top.get("fit_reason"),
+        }
+        if existing:
+            (
+                supabase.table("tracks")
+                .update(track_payload)
+                .eq("id", existing["id"])
+                .execute()
+            )
+            replaced += 1
+        else:
+            supabase.table("tracks").insert(track_payload).execute()
+            created += 1
 
-    print(f"[service] generate-playlist {request.date}: created={created}, skipped={skipped}, logs={len(logs)}")
-    return {"ok": True, "tracks_created": created, "tracks_skipped": skipped, "logs": len(logs)}
+    print(
+        f"[service] generate-playlist {request.date}: created={created}, "
+        f"replaced={replaced}, skipped={skipped}, logs={len(logs)}"
+    )
+    return {
+        "ok": True,
+        "tracks_created": created,
+        "tracks_replaced": replaced,
+        "tracks_skipped": skipped,
+        "logs": len(logs),
+    }
 

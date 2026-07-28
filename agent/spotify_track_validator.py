@@ -99,6 +99,12 @@ def validate_spotify_track(
         if isinstance(restriction, dict)
         else ""
     )
+    if restriction_reason == "explicit":
+        return {
+            "status": "explicit",
+            "reason": "explicit",
+            "track": track,
+        }
     if spotify_track.get("is_playable") is False or restriction_reason:
         return {
             "status": "unplayable",

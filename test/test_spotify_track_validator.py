@@ -40,6 +40,22 @@ class SpotifyTrackValidatorTests(unittest.TestCase):
         self.assertEqual(result["status"], "unplayable")
         self.assertEqual(result["reason"], "market")
 
+    def test_keeps_explicit_track_for_age_verification_notice(self) -> None:
+        explicit_track = candidate()
+        playable, diagnostics = filter_playable_spotify_tracks(
+            [explicit_track],
+            "token",
+            fetcher=lambda track_id, token: {
+                "id": track_id,
+                "is_playable": False,
+                "restrictions": {"reason": "explicit"},
+            },
+        )
+
+        self.assertEqual(playable, [explicit_track])
+        self.assertEqual(diagnostics[0]["status"], "explicit")
+        self.assertEqual(diagnostics[0]["reason"], "explicit")
+
     def test_uses_relinked_playable_spotify_track_url(self) -> None:
         replacement_id = "3uNf0Trx5NBhGq1qWkgK8G"
         result = validate_spotify_track(
