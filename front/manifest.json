@@ -9,13 +9,13 @@
   "theme_color": "#fbf6ea",
   "icons": [
     {
-      "src": "./assets/music-note-yellow.png",
+      "src": "./assets/common/music-note-yellow.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./assets/music-note-yellow.png",
+      "src": "./assets/common/music-note-yellow.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
