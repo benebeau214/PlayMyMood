@@ -338,6 +338,67 @@ class AnthropicMoodClient:
         ]
         return extract_json_object("\n".join(text_parts))
 
+    def select_best_track(
+        self,
+        *,
+        situation: str,
+        caption: str,
+        image_context: str,
+        emotions: dict[str, float],
+        target_audio_features: dict[str, Any],
+        candidates: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        payload = {
+            "model": self.model,
+            "max_tokens": 500,
+            "temperature": 0.0,
+            "system": (
+                "You are a strict final song selector for a diary-to-music app. "
+                "Return only one JSON object. Judge only from the supplied diary context, "
+                "track metadata, and audio features."
+            ),
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        "Choose exactly one track from the three candidates for this user log.\n"
+                        f"Situation: {situation}\n"
+                        f"Caption: {caption or '(none)'}\n"
+                        f"Photo analysis: {image_context or '(none)'}\n"
+                        f"Emotion scores JSON: {json.dumps(emotions, ensure_ascii=False, sort_keys=True)}\n"
+                        "Target audio features JSON: "
+                        f"{json.dumps(target_audio_features, ensure_ascii=False, sort_keys=True)}\n"
+                        f"Candidates JSON: {json.dumps(candidates, ensure_ascii=False, sort_keys=True)}\n\n"
+                        "Selection rules:\n"
+                        "- Select the song that best fits the combined photo, caption, situation, and emotions.\n"
+                        "- Treat the user's caption and selected emotions as strong evidence.\n"
+                        "- Use audio features and title/artist metadata only; do not invent facts about a song.\n"
+                        "- For study/focus logs, avoid very high danceability, speechiness, or an overly bright mood.\n"
+                        "- Balance fatigue: avoid music that is too sleepy unless the log asks for rest.\n"
+                        "- Return exactly: "
+                        "{\"selected_track_id\":\"id\",\"reason\":\"Korean reason\"}"
+                    ),
+                }
+            ],
+        }
+        request = urllib.request.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "content-type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+        response = _json_request(request, self.timeout)
+        text_parts = [
+            block.get("text", "")
+            for block in response.get("content", [])
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        return extract_json_object("\n".join(text_parts))
+
 
 def _json_request(request: urllib.request.Request, timeout: int) -> dict[str, Any]:
     try:
@@ -753,6 +814,94 @@ def rank_tracks(
         ),
         reverse=True,
     )
+
+
+def compact_track_for_selection(track: dict[str, Any]) -> dict[str, Any]:
+    audio_features = track.get("audio_features") or {}
+    return {
+        "id": track.get("id"),
+        "title": track.get("title"),
+        "artists": track.get("artists", []),
+        "popularity": track.get("popularity"),
+        "available_in_preferred_country": track.get("available_in_preferred_country"),
+        "audio_features": {
+            key: audio_features.get(key)
+            for key in (
+                "valence",
+                "danceability",
+                "energy",
+                "tempo",
+                "acousticness",
+                "instrumentalness",
+                "speechiness",
+                "loudness",
+            )
+        },
+    }
+
+
+def select_best_track(
+    situation: str,
+    emotions: dict[str, float],
+    music_result: dict[str, Any],
+    *,
+    caption: str = "",
+    image_context: str = "",
+    claude_client: Any | None = None,
+) -> dict[str, Any]:
+    """Use Claude to select one final track from up to three ranked candidates."""
+    candidates = [
+        track
+        for track in (music_result.get("recommendations") or [])[:3]
+        if isinstance(track, dict) and track.get("id")
+    ]
+    if not candidates:
+        raise ModelOutputError("no recommendation candidates to select from")
+
+    if len(candidates) == 1:
+        return {
+            "selected_track": candidates[0],
+            "selection": {
+                "selected_track_id": candidates[0]["id"],
+                "reason": "추천 후보가 한 곡이어서 해당 곡을 선택했습니다.",
+            },
+            "candidate_count": 1,
+        }
+
+    mood_profile = music_result.get("mood_profile") or {}
+    target_features = (
+        mood_profile.get("target_audio_features") or {}
+        if isinstance(mood_profile, dict)
+        else {}
+    )
+    claude = claude_client or AnthropicMoodClient()
+    if not hasattr(claude, "select_best_track"):
+        raise ModelOutputError("Claude client does not support final track selection")
+
+    selection = claude.select_best_track(
+        situation=situation,
+        caption=caption,
+        image_context=image_context,
+        emotions=emotions,
+        target_audio_features=target_features,
+        candidates=[compact_track_for_selection(track) for track in candidates],
+    )
+    selected_id = str(selection.get("selected_track_id") or "")
+    selected_track = next(
+        (track for track in candidates if str(track.get("id")) == selected_id),
+        None,
+    )
+    if selected_track is None:
+        selected_track = candidates[0]
+        selection = {
+            "selected_track_id": selected_track.get("id"),
+            "reason": "최종 선별 결과가 후보와 일치하지 않아 추천 1순위를 선택했습니다.",
+        }
+    return {
+        "selected_track": selected_track,
+        "selection": selection,
+        "candidate_count": len(candidates),
+    }
 
 
 def recommend_music(
