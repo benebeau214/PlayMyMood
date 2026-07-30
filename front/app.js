@@ -114,6 +114,8 @@ let isPlayerPlaying = false;
 let spotifyPlayer = null;
 let spotifyDeviceId = null;
 let spotifyReady = false;
+let spotifyInitializationPromise = null;
+let spotifyPlayerGeneration = 0;
 let spotifyPlaybackStarted = false;
 let spotifyIsPremium = null;
 let currentTrackUris = [];
@@ -373,11 +375,27 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 };
 
 async function initSpotifyPlayerIfPossible() {
-  if (!spotifyReady || spotifyPlayer || !window.Spotify) return;
+  if (!spotifyReady || spotifyPlayer || !window.Spotify) return spotifyPlayer;
+  if (spotifyInitializationPromise) return spotifyInitializationPromise;
+
+  const generation = spotifyPlayerGeneration;
+  const initialization = createSpotifyPlayer(generation);
+  spotifyInitializationPromise = initialization;
+  try {
+    return await initialization;
+  } finally {
+    if (spotifyInitializationPromise === initialization) {
+      spotifyInitializationPromise = null;
+    }
+  }
+}
+
+async function createSpotifyPlayer(generation) {
   const token = await getSpotifyAccessToken();
   // DEV_MODE 익명 로그인 등 실제 Spotify OAuth 토큰이 없으면 재생 기능은 조용히 비활성.
   if (!token) return;
   await refreshSpotifyPremiumStatus(token);
+  if (generation !== spotifyPlayerGeneration) return null;
   // 무료 계정은 Web Playback SDK 대신 곡 클릭 시 Spotify 곡 페이지로 이동한다.
   if (spotifyIsPremium === false) return;
 
@@ -472,10 +490,13 @@ async function initSpotifyPlayerIfPossible() {
   if (!connected) {
     showPlayerStatus("Spotify 재생 기기에 연결하지 못했어요. 새로고침 버튼을 눌러 다시 연결해주세요.", "error", 0);
   }
+  return connected ? player : null;
 }
 
 function disposeSpotifyPlayer() {
   const player = spotifyPlayer;
+  spotifyPlayerGeneration += 1;
+  spotifyInitializationPromise = null;
   // 먼저 전역 참조를 비워 기존 인스턴스에서 늦게 도착한 이벤트를 무시한다.
   spotifyPlayer = null;
   spotifyDeviceId = null;
@@ -499,7 +520,7 @@ async function waitForSpotifyDevice(timeoutMs = 12000) {
   return false;
 }
 
-async function transferPlaybackToThisDevice(token) {
+async function transferPlaybackToThisDevice(token, deviceId = spotifyDeviceId) {
   // 재생 전에 Spotify Connect가 이 기기를 "활성 기기"로 인식하도록 명시적으로 이전 요청.
   // (핸드폰/데스크톱 앱 등 다른 기기가 이미 활성 상태면 곧바로 play를 걸었을 때
   //  "Restriction violated" 403이 나는 경우가 있어서 이 단계가 필요함)
@@ -509,15 +530,36 @@ async function transferPlaybackToThisDevice(token) {
       Authorization: `Bearer ${token}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({ device_ids: [spotifyDeviceId], play: false }),
+    body: JSON.stringify({ device_ids: [deviceId], play: false }),
   });
+  const body = response.ok ? "" : await response.text().catch(() => "");
   if (response.ok) {
-    console.log(`[기기 이전] 성공 (status=${response.status})`);
+    console.log(`[기기 이전] 성공 (status=${response.status}, device_id=${deviceId})`);
   } else {
-    const body = await response.text().catch(() => "");
-    console.warn(`[기기 이전] 실패 (status=${response.status}): ${body}`);
+    console.warn(`[기기 이전] 실패 (status=${response.status}, device_id=${deviceId}): ${body}`);
   }
-  return response.ok;
+  return { ok: response.ok, status: response.status, body };
+}
+
+async function waitForSpotifyDeviceRegistration(token) {
+  const deviceId = spotifyDeviceId;
+  if (!deviceId) {
+    return { ok: false, status: 0, body: "missing_device_id" };
+  }
+
+  // 모바일에서는 SDK ready 이후 Spotify Connect API에 device_id가 보이기까지
+  // 수 초가 더 걸릴 수 있다. 같은 ID에 대해 먼저 등록을 재확인한다.
+  const delays = [0, 300, 600, 1000, 1500];
+  let result = { ok: false, status: 404, body: "Device not found" };
+  for (const delay of delays) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    if (spotifyDeviceId !== deviceId) {
+      return { ok: false, status: 0, body: "device_id_changed" };
+    }
+    result = await transferPlaybackToThisDevice(token, deviceId);
+    if (result.ok || result.status !== 404) return result;
+  }
+  return result;
 }
 
 async function ensureSpotifyLocalPlayback(index) {
@@ -567,15 +609,26 @@ async function playSpotifyTrackAt(index, attemptedIndexes = new Set()) {
   attemptedIndexes.add(currentTrackIndex);
   const uris = currentTrackUris.slice(currentTrackIndex);
   console.log("[재생 시도] uris =", uris);
-  const transferred = await transferPlaybackToThisDevice(token);
-  if (!transferred) {
+  const transfer = await waitForSpotifyDeviceRegistration(token);
+  // 일부 모바일 환경에서는 transfer endpoint가 404여도 URI를 포함한 play
+  // endpoint가 새 SDK 기기를 직접 활성화할 수 있으므로, 404만큼은 재생 요청을
+  // 계속 진행한다. 권한/인증 오류는 그대로 중단한다.
+  if (!transfer.ok && transfer.status !== 404) {
+    const message =
+      transfer.status === 403
+          ? "Spotify 재생 기기 권한이 없어요. 로그아웃한 뒤 Spotify로 다시 로그인해주세요."
+          : "Spotify 재생 기기를 활성화하지 못했어요. 새로고침 버튼을 누른 뒤 다시 시도해주세요.";
     showPlayerStatus(
-      "Spotify 재생 기기를 활성화하지 못했어요. Spotify 권한을 확인하거나 다시 로그인해주세요.",
+      message,
       "error",
       0,
     );
     setPlayerPlaying(false);
     return false;
+  }
+  if (!transfer.ok && transfer.status === 404) {
+    console.warn("기기 이전 404 이후 곡 URI를 포함한 직접 재생 요청으로 계속 시도합니다.");
+    showPlayerStatus("모바일 재생 기기를 등록하는 중이에요. 잠시만 기다려주세요.", "info", 6000);
   }
   await new Promise((resolve) => setTimeout(resolve, 300));
 
