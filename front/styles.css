@@ -1792,6 +1792,26 @@ h1 {
   filter: drop-shadow(0 0 0 #111) drop-shadow(0 0 3px rgba(0, 0, 0, 0.35));
 }
 
+/* 19개 감정이 402x874 화면 안에 5줄로 모두 보이도록 압축한다. */
+.emotion-panel {
+  bottom: 18px;
+  height: 382px;
+}
+
+.emotion-choice-grid {
+  gap: 6px 15px;
+}
+
+.emotion-choice {
+  height: 55px;
+  gap: 3px;
+}
+
+.emotion-choice img {
+  width: 40px;
+  height: 40px;
+}
+
 .record-complete-button {
   display: none;
 }
