@@ -381,7 +381,7 @@ async function initSpotifyPlayerIfPossible() {
   // 무료 계정은 Web Playback SDK 대신 곡 클릭 시 Spotify 곡 페이지로 이동한다.
   if (spotifyIsPremium === false) return;
 
-  spotifyPlayer = new window.Spotify.Player({
+  const player = new window.Spotify.Player({
     name: "Play My Mood",
     getOAuthToken: async (callback) => {
       // 주의: Supabase는 자체 세션(JWT) 갱신 시 provider_token(스포티파이 access token)을
@@ -392,8 +392,10 @@ async function initSpotifyPlayerIfPossible() {
     },
     volume: 0.8,
   });
+  spotifyPlayer = player;
 
-  spotifyPlayer.addListener("ready", ({ device_id }) => {
+  player.addListener("ready", ({ device_id }) => {
+    if (spotifyPlayer !== player) return;
     spotifyDeviceId = device_id;
     console.log("Spotify 플레이어 준비 완료, device_id =", device_id);
     showPlayerStatus("Spotify 연결 완료. 재생 버튼을 눌러주세요.", "info", 3000);
@@ -403,19 +405,23 @@ async function initSpotifyPlayerIfPossible() {
       startSpotifyPlaybackAt(startIndex);
     }
   });
-  spotifyPlayer.addListener("not_ready", () => {
+  player.addListener("not_ready", () => {
+    if (spotifyPlayer !== player) return;
     spotifyDeviceId = null;
     showPlayerStatus("Spotify 연결이 끊겼어요. 오른쪽 위 새로고침 버튼을 눌러주세요.", "error", 0);
   });
-  spotifyPlayer.addListener("initialization_error", ({ message }) => {
+  player.addListener("initialization_error", ({ message }) => {
+    if (spotifyPlayer !== player) return;
     console.error("Spotify 초기화 실패:", message);
     showPlayerStatus(`이 모바일 브라우저에서 Spotify 재생을 초기화하지 못했어요. ${message}`, "error", 0);
   });
-  spotifyPlayer.addListener("authentication_error", ({ message }) => {
+  player.addListener("authentication_error", ({ message }) => {
+    if (spotifyPlayer !== player) return;
     console.error("Spotify 인증 실패:", message);
     showPlayerStatus("Spotify 로그인이 만료됐어요. 로그아웃한 뒤 다시 로그인해주세요.", "error", 0);
   });
-  spotifyPlayer.addListener("account_error", ({ message }) => {
+  player.addListener("account_error", ({ message }) => {
+    if (spotifyPlayer !== player) return;
     spotifyIsPremium = false;
     console.error("Spotify 계정 오류(Premium 계정이 아니면 재생 불가):", message);
     showPlayerStatus("앱 안에서 재생하려면 Spotify Premium 계정이 필요해요.", "error", 0);
@@ -425,17 +431,20 @@ async function initSpotifyPlayerIfPossible() {
       openTrackInSpotify(fallbackIndex);
     }
   });
-  spotifyPlayer.addListener("autoplay_failed", () => {
+  player.addListener("autoplay_failed", () => {
+    if (spotifyPlayer !== player) return;
     console.warn("Spotify 자동 재생이 모바일 브라우저에서 차단됨");
     showPlayerStatus("모바일 브라우저가 자동 재생을 막았어요. 아래 재생 버튼을 한 번 더 눌러주세요.", "error", 0);
     setPlayerPlaying(false);
   });
-  spotifyPlayer.addListener("playback_error", ({ message }) => {
+  player.addListener("playback_error", ({ message }) => {
+    if (spotifyPlayer !== player) return;
     console.error("Spotify 재생 오류:", message, "새로고침을 눌러주세요");
     showPlayerStatus(`Spotify 재생 오류: ${message} 새로고침을 눌러주세요`, "error", 0);
     setPlayerPlaying(false);
   });
-  spotifyPlayer.addListener("player_state_changed", (state) => {
+  player.addListener("player_state_changed", (state) => {
+    if (spotifyPlayer !== player) return;
     if (!state) return;
     const currentUri = state.track_window?.current_track?.uri;
     const playingIndex = currentTrackUris.indexOf(currentUri);
@@ -458,10 +467,36 @@ async function initSpotifyPlayerIfPossible() {
     setPlayerPlaying(!state.paused);
   });
 
-  const connected = await spotifyPlayer.connect();
+  const connected = await player.connect();
+  if (spotifyPlayer !== player) return;
   if (!connected) {
     showPlayerStatus("Spotify 재생 기기에 연결하지 못했어요. 새로고침 버튼을 눌러 다시 연결해주세요.", "error", 0);
   }
+}
+
+function disposeSpotifyPlayer() {
+  const player = spotifyPlayer;
+  // 먼저 전역 참조를 비워 기존 인스턴스에서 늦게 도착한 이벤트를 무시한다.
+  spotifyPlayer = null;
+  spotifyDeviceId = null;
+  spotifyPlaybackStarted = false;
+  pendingPlaybackIndex = null;
+  setPlayerPlaying(false);
+  if (!player) return;
+  try {
+    player.disconnect();
+  } catch (error) {
+    console.warn("기존 Spotify 플레이어 종료 실패:", error);
+  }
+}
+
+async function waitForSpotifyDevice(timeoutMs = 12000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (spotifyPlayer && spotifyDeviceId) return true;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return false;
 }
 
 async function transferPlaybackToThisDevice(token) {
@@ -1930,8 +1965,6 @@ async function renderPlaylistPlayer() {
 
 async function refreshPlaylistPlayer(button) {
   if (button?.disabled) return;
-  // 첫 await 전에 호출해야 iOS가 이 탭을 실제 사용자 미디어 동작으로 인정한다.
-  activateSpotifyForMobileGesture();
   if (button) {
     button.disabled = true;
     button.classList.add("refreshing");
@@ -1953,24 +1986,27 @@ async function refreshPlaylistPlayer(button) {
     }
     if (premium !== true) return;
 
-    if (spotifyPlayer) {
-      spotifyDeviceId = null;
-      spotifyPlaybackStarted = false;
-      spotifyPlayer.disconnect();
-      const connected = await spotifyPlayer.connect();
-      if (!connected) {
-        showPlayerStatus("Spotify 기기 재연결에 실패했어요. 로그아웃 후 다시 로그인해보세요.", "error", 0);
-      } else {
-        showPlayerStatus("Spotify 기기를 다시 연결하고 있어요. 연결 완료 후 재생 버튼을 눌러주세요.", "info", 5000);
-      }
-    } else {
-      await initSpotifyPlayerIfPossible();
-      if (!spotifyPlayer) {
-        showPlayerStatus("Spotify 재생기를 만들지 못했어요. 브라우저 지원 또는 로그인 상태를 확인해주세요.", "error", 0);
-      } else {
-        showPlayerStatus("Spotify 연결을 시작했어요. 연결 완료 후 재생 버튼을 눌러주세요.", "info", 5000);
-      }
+    // disconnect/connect만 하면 모바일 브라우저의 손상된 SDK 내부 상태와
+    // 오래된 device_id가 유지될 수 있다. 강력 새로고침처럼 인스턴스를 폐기하고
+    // 완전히 새로운 Player와 device_id를 만든다.
+    disposeSpotifyPlayer();
+    await initSpotifyPlayerIfPossible();
+    if (!spotifyPlayer) {
+      showPlayerStatus("Spotify 재생기를 새로 만들지 못했어요. 로그아웃 후 다시 로그인해주세요.", "error", 0);
+      return;
     }
+
+    const ready = await waitForSpotifyDevice();
+    if (!ready) {
+      disposeSpotifyPlayer();
+      showPlayerStatus(
+        "Spotify 새 재생 기기 연결 시간이 초과됐어요. 네트워크를 확인한 뒤 다시 눌러주세요.",
+        "error",
+        0,
+      );
+      return;
+    }
+    showPlayerStatus("Spotify 재생 기기를 새로 연결했어요. 재생 버튼을 눌러주세요.", "info", 5000);
   } catch (error) {
     console.error("플레이리스트 새로고침 실패:", error);
     showPlayerStatus(`새로고침에 실패했어요: ${error.message || error}`, "error", 0);
