@@ -724,15 +724,15 @@ async function saveOnboarding() {
 // --- 기록(로그) 저장 → Supabase ---
 const EMOTION_VALUES = [
   "행복한", "신나는", "설레는", "기쁜", "뿌듯한", "감동한", "편안한", "후련한",
-  "만족한", "짜릿한", "안도감", "그리운", "아련한", "뭉클한", "우울한", "외로운",
-  "속상한", "허무한", "피곤한", "짜증난", "화난", "불안한", "괴로운",
+  "만족한", "짜릿한", "뭉클한", "우울한", "속상한", "허무한", "피곤한",
+  "짜증난", "화난", "불안한", "괴로운",
 ];
 
 const EMOTION_NOTE_ASSETS = {
   "기쁜": "./assets/emotions/emotion-joy.png",
   "신나는": "./assets/emotions/emotion-excited.png",
   "행복한": "./assets/emotions/emotion-happy.png",
-  "설레는": "./assets/emotions/emotion-flutter.png",
+  "설레는": "./assets/emotions/emotion-flutter.png?v=20260730",
   "뿌듯한": "./assets/emotions/emotion-proud.png",
   "감동한": "./assets/emotions/emotion-touched.png",
   "편안한": "./assets/emotions/emotion-comfortable.png",
@@ -745,6 +745,9 @@ const EMOTION_NOTE_ASSETS = {
   "괴로운": "./assets/emotions/emotion-distressed.png",
   "피곤한": "./assets/emotions/emotion-tired.png",
   "속상한": "./assets/emotions/emotion-hurt.png",
+  "허무한": "./assets/emotions/emotion-empty.png",
+  "후련한": "./assets/emotions/emotion-refreshed.png",
+  "뭉클한": "./assets/emotions/emotion-moved.png",
 };
 
 function emotionNoteSources(emotions = []) {

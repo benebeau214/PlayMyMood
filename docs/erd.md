@@ -43,7 +43,7 @@ erDiagram
     date log_date "logged_at에서 자동 계산 (generated)"
     text photo_path "Storage object path, 트랙 썸네일로도 재사용"
     text caption
-    emotion_enum_array emotions "행복한/신나는/…/괴로운(23개) 중 최대 9개, 선택 순서 보존"
+    emotion_enum_array emotions "행복한/신나는/…/괴로운(19개) 중 최대 9개, 선택 순서 보존"
     jsonb emotion_scores "agent 산출 10축 점수"
     text mood_label
     text situation
@@ -140,9 +140,9 @@ erDiagram
 | sticker_path | text | nullable | `emoji_sticker_agent.py`가 로그마다 생성하는 이모지 스티커 PNG의 Storage object path. Replicate 생성 URL은 만료되므로 우리 버킷(`<user_id>/stickers/<log_id>.png`)에 다운로드해 저장. 생성 전에는 NULL |
 | sticker | jsonb | nullable | 스티커 agent 브리프 (`symbol`, `emotion_label`, `emotion_intensity`, `primary_color`/`secondary_color`/`highlight_color`/`shadow_color`, `color_rationale` 등). 앱이 커버 배치/배경색·라벨에 쓰거나 재생성 시 참고 |
 
-`emotion_enum`은 `CUSTOM_EMOTION_LABELS` 23개를 그대로 순서대로 시드하는 Postgres enum:
-`CREATE TYPE emotion_enum AS ENUM ('행복한','신나는','설레는','기쁜','뿌듯한','감동한','편안한','후련한','만족한','짜릿한','안도감','그리운','아련한','뭉클한','우울한','외로운','속상한','허무한','피곤한','짜증난','화난','불안한','괴로운');`
-(`agent/mood_intake_agent.py`의 `CUSTOM_EMOTION_LABELS`와 정확히 일치하는 23개. Figma 목업엔 '멘붕'도 있었지만 지금은 빼고 시작 — 나중에 필요해지면 enum과 agent 코드를 같이 업데이트합니다.)
+`emotion_enum`은 실제 감정 이모지 에셋과 대응하는 `CUSTOM_EMOTION_LABELS` 19개를 그대로 시드하는 Postgres enum:
+`CREATE TYPE emotion_enum AS ENUM ('행복한','신나는','설레는','기쁜','뿌듯한','감동한','편안한','후련한','만족한','짜릿한','뭉클한','우울한','속상한','허무한','피곤한','짜증난','화난','불안한','괴로운');`
+(`agent/mood_intake_agent.py`의 `CUSTOM_EMOTION_LABELS`, 프론트의 `EMOTION_VALUES`, 감정 이미지 에셋이 정확히 일치하는 19개입니다.)
 (enum 값은 생성 순서가 곧 정렬 순서라 `sort_order` 컬럼 없이 `ORDER BY`가 됩니다.)
 
 **선택 순서는 배열 순서로 그대로 보존됩니다.** Postgres 배열은 원소 순서를 유지하므로
